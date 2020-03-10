@@ -21,7 +21,7 @@ def loadImages():
     images = dict()
     
     for label in LABELS:
-        files = glob.glob("allSquares/squares"+label+"_*.png")
+        files = glob.glob("images/square_29p/squares_29p_"+label+"_*.png")
         print('images for label', label, len(files))
         images[label] = [image.load_img(f, target_size=(CENTER_SIZE, CENTER_SIZE)) for f in files[:10]]
 
