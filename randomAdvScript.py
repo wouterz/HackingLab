@@ -15,6 +15,9 @@ import matplotlib.pyplot as plt
 import glob
 from math import log, inf
 import itertools
+import pickle
+from datetime import datetime
+
 
 
 def loadImages():
@@ -130,13 +133,17 @@ def train():
                 best_loss = loss
                 best_adv_program = adv_program
                 bestMatrix = mresult
-            print(i, end='\r')
+
+            print('round: ', i, 'best loss: ', best_loss, end='\r')
 
             if best_loss < 0.01:
                 break
         return (best_adv_program, bestMatrix)
+    except KeyboardInterrupt as e:
+        print('\nkeyboardInterupt:', e)
+        return (best_adv_program, bestMatrix)
     except Exception as e:
-        print('exception:', e)
+        print('\nexception:', e)
         return (best_adv_program, bestMatrix)
 
 
@@ -150,5 +157,12 @@ if __name__ == "__main__":
     i_v3_model = inception_v3.InceptionV3(weights='imagenet', input_tensor=input_tensor,
         backend=keras.backend, layers=keras.layers, models=keras.models, utils=keras.utils)
     
-    train()
+    try:
+        best_program, best_matrix = train()
+        now = datetime.now()
+        now_string = now.strftime("%d-%m-%Y_%H-%M-%S")
+        pickle.dump(best_program, open('adv_program-'+now_string, 'wb'))
+        pickle.dump(best_matrix, open('best_matrix-'+now_string, 'wb'))
+    except Exception as e:
+        print('error', e)
 
