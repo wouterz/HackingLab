@@ -1,15 +1,19 @@
 from PIL import Image, ImageDraw
-i = 3
-j = 3
+initI = 1
+initJ = 1
+squareSize = 5
+i = initI
+j = initJ
+total = initI*5+(squareSize+1)*4
 grid = [];
-while(i<110):
-    while(j<110):
-        grid.append([(i,j),(i+35,j+35)])
-        j=j+35
-        j=j+4;
-    i=i+4;
-    j=3
-    i=i+35
+while(i<total):
+    while(j<total):
+        grid.append([(i,j),(i+squareSize,j+squareSize)])
+        j+=squareSize
+        j+=initJ+1;
+    i+=initI+1;
+    j=initJ
+    i+=squareSize
 print(grid)
 
 #for i in grid:
@@ -19,7 +23,7 @@ print(grid)
 #    draw.rectangle(i, fill='white')
 #    img.save('pil' +str(i)+ '.png')
 
-img = Image.new('RGB', (120,120), color='black')
+img = Image.new('RGB', (total,total), color='black')
 for i in grid:
     draw = ImageDraw.Draw(img)
     draw.rectangle(i, fill='white')
@@ -32,10 +36,11 @@ powerset(grid)
 j = 0
 squareCount = [0,0,0,0,0,0,0,0,0,0]
 for i in ls:
-    img = Image.new('RGB', (120,120), color='black')
+    img = Image.new('RGB', (total,total), color='black')
     size = len(i)
-    for t in i:
-        draw = ImageDraw.Draw(img)
-        draw.rectangle(t, fill='white')
-    squareCount[size]=squareCount[size]+1;
-    img.save('./images/square/squares'+str(size)+'_'+str(squareCount[size])+'.png')
+    if size<10:
+        for t in i:
+            draw = ImageDraw.Draw(img)
+            draw.rectangle(t, fill='white')
+        squareCount[size]=squareCount[size]+1;
+        img.save('./images/square_29p/squares_29p_'+str(size)+'_'+str(squareCount[size])+'.png')
