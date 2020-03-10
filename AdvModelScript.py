@@ -208,13 +208,16 @@ print(inputa.shape)
 print(outputa.shape)
 
 model.fit(inputa, outputa,
-                epochs=1200,
+                epochs=1,
                 batch_size=25,
                 validation_split=0.1)
 
+# Save model .hd5
 model.save("adv_reprogramming_inception3.h5")
-adv_layer_weights = model.get_layer('adv_layer_1').get_weights()
+# Save weights .json
+adv_layer_weights = model.get_layer('adv_layer_1').get_weights() # return numpy array containing 299 elements of size 299x3
 adv_layer = {}
-adv_layer["weights"] = adv_layer_weights
+adv_layer["weights"] = adv_layer_weights[0].tolist()
+print(adv_layer)
 with open("adv_layer.json", 'w') as outfile:
     json.dump(adv_layer, outfile)
