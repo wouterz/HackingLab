@@ -2,7 +2,11 @@ from keras.datasets import mnist
 import numpy as np
 import json
 import os
-import os.path
+import matplotlib.pyplot as plt
+from math import log, inf
+from PIL import Image
+import glob
+
 import keras
 import tensorflow as tf
 from keras.layers import Input, Layer
@@ -11,25 +15,22 @@ from keras.preprocessing import image
 from keras.models import Model
 from keras.optimizers import Adam
 from keras.utils import to_categorical
-import matplotlib.pyplot as plt
-from math import log, inf
-from PIL import Image
 from keras import backend as K
 from sklearn.model_selection import train_test_split
-import glob
 
 
 
-def load_images():
+
+def load_images() -> {str:[]}:
     images = dict()
     
     for label in LABELS:
-        files = glob.glob("images/square_%dp/squares_%dp_"+label+"_*.png" % (CENTER_SIZE, CENTER_SIZE)
+        files = glob.glob("images/square_%dp/squares_%dp_%s_*.png" % (CENTER_SIZE, CENTER_SIZE, label))
         images[label] = [image.load_img(f, target_size=(CENTER_SIZE, CENTER_SIZE)) for f in files[:MAX_IMAGES_PER_CLASS]]
 
     return images
 
-def expand_images(images):
+def expand_images(images: {str:[]}) -> {str:[]}:
     for key in images.keys():
         ls = images[key]
         if(len(ls)<1000):
@@ -80,6 +81,7 @@ if __name__ == "__main__":
     ADAM_LEARN_RATE = 0.05
     ADAM_DECAY = 0.96
 
+    TEST_SIZE= 0.10
     EPOCHS = 100
     BATCH_SIZE = 25
     ### END SETUP PARAMETERS ###
@@ -104,7 +106,7 @@ if __name__ == "__main__":
     output_a = np.array(output_list)
     output_a = to_categorical(output_a, num_classes=1000)
 
-    x_train, x_valid, y_train, y_valid = train_test_split(input_a, output_a, test_size=0.10, shuffle= True)
+    x_train, x_valid, y_train, y_valid = train_test_split(input_a, output_a, test_size=TEST_SIZE, shuffle= True)
 
     # Setup model
 
@@ -121,7 +123,7 @@ if __name__ == "__main__":
     # Combine layers
     outputs = inception(al)
 
-    model = Model(inputs=[Input(shape=(CENTER_SIZE, CENTER_SIZE, 3))], outputs=[outputs])
+    model = Model(inputs=[inputs], outputs=[outputs])
 
     model.compile(optimizer = Adam(lr=ADAM_LEARN_RATE, decay=ADAM_DECAY),
                             loss='categorical_crossentropy',
@@ -149,5 +151,5 @@ if __name__ == "__main__":
 
     now = datetime.now()
     now_string = now.strftime("%d-%m-%Y_%H-%M-%S")
-    with open("results/adv/adv_layer-%d.json" % now_string, 'w') as outfile:
+    with open("results/adv/adv_layer-%s.json" % now_string, 'w') as outfile:
         json.dump(adv_layer, outfile)

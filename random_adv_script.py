@@ -1,7 +1,6 @@
 import numpy as np
 import json
 import os
-import os.path
 
 import keras
 import tensorflow as tf
@@ -54,14 +53,16 @@ def classify(img, model='I_V3'):
     #results
     return application.decode_predictions(predictions, top=2, utils=keras.utils)[0]
 
-def evaluate(images: {str: []}, adv_program: []):
+def evaluate(model_name:str, images: {str: []}, adv_program: []):
     results = {}
+    start = int((IMAGE_SIZE - CENTER_SIZE) / 2)
+    end = int((IMAGE_SIZE - CENTER_SIZE) / 2 + CENTER_SIZE)
     for k, class_images in images.items():
         class_results = []
         for img in class_images:
-            adv_program[START:END, START:END, :] = img
+            adv_program[start:end, start:end, :] = img
 #             Append best match
-            class_results.append(classify(adv_program, 'I_V3')[0][1])
+            class_results.append(classify(adv_program, model_name)[0][1])
         
         results[k] = class_results
     return results
@@ -70,7 +71,7 @@ flatten = lambda l: [item for sublist in l for item in sublist]
 value_dict = dict()
 key_dict = dict()
 
-def results_to_matrix(results):
+def results_to_matrix(results: {str:[]}) -> [[]]:
     keys = results.keys()
     for key in keys:
         if(key not in key_dict.keys()):
@@ -90,7 +91,7 @@ def results_to_matrix(results):
     #    matrix.append(el)
     return matrix
 
-def compute_matrix_loss(matrix):
+def compute_matrix_loss(matrix: [[]]) -> float:
     matrix = matrix/matrix.sum(axis=1)[:,None]
     usedLabels = []
     loss=0
@@ -111,11 +112,10 @@ def compute_matrix_loss(matrix):
     loss = loss+(len(matrix[1])-len(matrix))*10
     return loss
 
-def train():
+def train(model_name:str, images:{str:[]}) -> ([[]], [[]]):
     best_adv_program = []
     best_loss = inf
     
-    images = load_images()
     best_matrix = []
     try:
         for i in itertools.count(0):
@@ -123,7 +123,7 @@ def train():
             adv_program = np.random.rand(IMAGE_SIZE,IMAGE_SIZE,3) * 255
             adv_program = adv_program.astype(int)
 
-            result = evaluate(images, adv_program)
+            result = evaluate(model_name, images, adv_program)
             mresult = results_to_matrix(result)
 
             loss = compute_matrix_loss(mresult)
@@ -134,9 +134,9 @@ def train():
 
             print('round: ', i, 'best loss: ', best_loss, end='\r')
 
-            if best_loss < 0.01:
-                break
-        return (best_adv_program, best_matrix)
+            if best_loss < BEST_LOSS_GOAL:
+                return (best_adv_program, best_matrix)
+
     except KeyboardInterrupt as e:
         print('\nkeyboardInterupt:', e)
         return (best_adv_program, best_matrix)
@@ -151,24 +151,27 @@ if __name__ == "__main__":
     IMAGE_SIZE = 299
     LABELS = ['1', '2', '3', '4', '5', '6', '7', '8', '9']
     MAX_IMAGES_PER_CLASS = 10
+    BEST_LOSS_GOAL = 0.01
     ### END SETUP PARAMETERS ###
-
-    START = int((IMAGE_SIZE - CENTER_SIZE) / 2)
-    END = int((IMAGE_SIZE - CENTER_SIZE) / 2 + CENTER_SIZE)
     
+    # Load Images
+    images = load_images()
+
+    # Load model
     i_v3_model = inception_v3.InceptionV3(weights='imagenet', input_tensor=Input(shape=(IMAGE_SIZE, IMAGE_SIZE, 3)),
         backend=keras.backend, layers=keras.layers, models=keras.models, utils=keras.utils)
-    
+
     try:
-        best_program, best_matrix = train()
+        best_program, best_matrix = train('I_V3', images)
+
+        if not os.path.exists("results/random/"):
+            os.makedirs("results/random/")
+
         now = datetime.now()
         now_string = now.strftime("%d-%m-%Y_%H-%M-%S")
 
-        if not path.exists("results/random/"):
-            os.makedirs("results/random/")
-
-        pickle.dump(best_program, open('results/random/adv_program-'+now_string, 'wb'))
-        pickle.dump(best_matrix, open('results/random/best_matrix-'+now_string, 'wb'))
+        pickle.dump(best_program, open('results/random/adv_program-%s' % now_string, 'wb'))
+        pickle.dump(best_matrix, open('results/random/best_matrix-%s' % now_string, 'wb'))
     except Exception as e:
         print('error', e)
 
