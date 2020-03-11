@@ -20,7 +20,7 @@ from datetime import datetime
 
 
 
-def loadImages():
+def load_images():
     images = dict()
     
     for label in LABELS:
@@ -69,47 +69,47 @@ def evaluate(images: {str: []}, adv_program: []):
     return results
 
 flatten = lambda l: [item for sublist in l for item in sublist]
-valueDict = dict()
-keyDict = dict()
+value_dict = dict()
+key_dict = dict()
 
 def results_to_matrix(results):
     keys = results.keys()
     for key in keys:
-        if(key not in keyDict.keys()):
-            keyDict[key]=len(keyDict.keys())
+        if(key not in key_dict.keys()):
+            key_dict[key]=len(key_dict.keys())
     values = set(flatten(results.values()))
     for val in values:
-        if(val not in valueDict.keys()):
-            valueDict[val]=len(valueDict.keys())
+        if(val not in value_dict.keys()):
+            value_dict[val]=len(value_dict.keys())
  #   if(isinstance(matrix, list)):
-    matrix = np.zeros((len(keys), len(valueDict.keys())))
+    matrix = np.zeros((len(keys), len(value_dict.keys())))
     for i in results.keys():
         for j in results[i]:
-            matrix[keyDict[i]][valueDict[j]]+=1
+            matrix[key_dict[i]][value_dict[j]]+=1
     #for value in results.values():
     #    el=[]
     #    for c in classes: el.append(value.count(c))
     #    matrix.append(el)
     return matrix
 
-def computeMatrixLoss(matrix):
+def compute_matrix_loss(matrix):
     matrix = matrix/matrix.sum(axis=1)[:,None]
     usedLabels = []
     loss=0
     matrix = matrix.transpose()
     for i in matrix:
-        highestProbability = 0
-        probabilityID = inf
+        highest_probability = 0
+        probability_id = inf
         for j in range(0,len(i)):
             if(j not in usedLabels):
-                if(i[j]>=highestProbability):
-                    highestProbability=i[j]
-                    probabilityID=j
-        usedLabels.append(probabilityID)
-        if(highestProbability==0):
+                if(i[j]>=highest_probability):
+                    highest_probability=i[j]
+                    probability_id=j
+        usedLabels.append(probability_id)
+        if(highest_probability==0):
             loss = loss+10
         else:
-            loss = loss - log(highestProbability)
+            loss = loss - log(highest_probability)
     loss = loss+(len(matrix[1])-len(matrix))*10
     return loss
 
@@ -117,8 +117,8 @@ def train():
     best_adv_program = []
     best_loss = inf
     
-    images = loadImages()
-    bestMatrix = []
+    images = load_images()
+    best_matrix = []
     try:
         for i in itertools.count(0):
 
@@ -128,23 +128,23 @@ def train():
             result = evaluate(images, adv_program)
             mresult = results_to_matrix(result)
 
-            loss = computeMatrixLoss(mresult)
+            loss = compute_matrix_loss(mresult)
             if loss < best_loss:
                 best_loss = loss
                 best_adv_program = adv_program
-                bestMatrix = mresult
+                best_matrix = mresult
 
             print('round: ', i, 'best loss: ', best_loss, end='\r')
 
             if best_loss < 0.01:
                 break
-        return (best_adv_program, bestMatrix)
+        return (best_adv_program, best_matrix)
     except KeyboardInterrupt as e:
         print('\nkeyboardInterupt:', e)
-        return (best_adv_program, bestMatrix)
+        return (best_adv_program, best_matrix)
     except Exception as e:
         print('\nexception:', e)
-        return (best_adv_program, bestMatrix)
+        return (best_adv_program, best_matrix)
 
 
 if __name__ == "__main__":
@@ -161,6 +161,10 @@ if __name__ == "__main__":
         best_program, best_matrix = train()
         now = datetime.now()
         now_string = now.strftime("%d-%m-%Y_%H-%M-%S")
+
+        if not path.exists("results/random/"):
+            os.makedirs("results/random/")
+
         pickle.dump(best_program, open('results/random/adv_program-'+now_string, 'wb'))
         pickle.dump(best_matrix, open('results/random/best_matrix-'+now_string, 'wb'))
     except Exception as e:

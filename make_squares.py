@@ -6,13 +6,13 @@ squareSize = 5
 i = initI
 j = initJ
 total = initI*5+(squareSize+1)*4
-grid = [];
+grid = []
 while(i<total):
     while(j<total):
         grid.append([(i,j),(i+squareSize,j+squareSize)])
         j+=squareSize
-        j+=initJ+1;
-    i+=initI+1;
+        j+=initJ+1
+    i+=initI+1
     j=initJ
     i+=squareSize
 print(grid)
@@ -40,7 +40,7 @@ squareCount = [0,0,0,0,0,0,0,0,0,0]
 try:
     os.stat("./images/square_35p")
 except:
-    os.mkdir("./images/square_35p")
+    os.makedirs("./images/square_35p")
 for i in ls:
     img = Image.new('RGB', (total,total), color='black')
     size = len(i)
@@ -48,5 +48,5 @@ for i in ls:
         for t in i:
             draw = ImageDraw.Draw(img)
             draw.rectangle(t, fill='white')
-        squareCount[size]=squareCount[size]+1;
+        squareCount[size]=squareCount[size]+1
         img.save('./images/square_35p/squares_35p_'+str(size)+'_'+str(squareCount[size])+'.png')
