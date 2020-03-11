@@ -18,15 +18,13 @@ import itertools
 import pickle
 from datetime import datetime
 
-
-
 def load_images():
     images = dict()
-    
+
     for label in LABELS:
-        files = glob.glob("images/square_35p/squares_35p_"+label+"_*.png")
+        files = glob.glob("images/square_%dp/squares_%dp_%s_*.png" % (CENTER_SIZE, CENTER_SIZE, label))
         print('images for label', label, len(files))
-        images[label] = [image.load_img(f, target_size=(CENTER_SIZE, CENTER_SIZE)) for f in files[:10]]
+        images[label] = [image.load_img(f, target_size=(CENTER_SIZE, CENTER_SIZE)) for f in files[:MAX_IMAGES_PER_CLASS]]
 
     return images
 
@@ -122,7 +120,7 @@ def train():
     try:
         for i in itertools.count(0):
 
-            adv_program = np.random.rand(299,299,3) * 255
+            adv_program = np.random.rand(IMAGE_SIZE,IMAGE_SIZE,3) * 255
             adv_program = adv_program.astype(int)
 
             result = evaluate(images, adv_program)
@@ -148,13 +146,17 @@ def train():
 
 
 if __name__ == "__main__":
+    ### SETUP PARAMETERS ###
     CENTER_SIZE = 35
+    IMAGE_SIZE = 299
     LABELS = ['1', '2', '3', '4', '5', '6', '7', '8', '9']
-    START = int((299 - CENTER_SIZE) / 2)
-    END = int((299 - CENTER_SIZE) / 2 + CENTER_SIZE)
+    MAX_IMAGES_PER_CLASS = 10
+    ### END SETUP PARAMETERS ###
+
+    START = int((IMAGE_SIZE - CENTER_SIZE) / 2)
+    END = int((IMAGE_SIZE - CENTER_SIZE) / 2 + CENTER_SIZE)
     
-    input_tensor = Input(shape=(299, 299, 3))
-    i_v3_model = inception_v3.InceptionV3(weights='imagenet', input_tensor=input_tensor,
+    i_v3_model = inception_v3.InceptionV3(weights='imagenet', input_tensor=Input(shape=(IMAGE_SIZE, IMAGE_SIZE, 3)),
         backend=keras.backend, layers=keras.layers, models=keras.models, utils=keras.utils)
     
     try:
