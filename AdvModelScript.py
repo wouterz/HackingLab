@@ -17,7 +17,7 @@ from PIL import Image
 from keras import backend as K
 from sklearn.model_selection import train_test_split
 
-CENTER_SIZE = 29
+CENTER_SIZE = 35 
 LABELS = ['1', '2', '3', '4', '5', '6', '7', '8', '9']
 import glob
 
@@ -25,13 +25,13 @@ def loadImages():
     images = dict()
     
     for label in LABELS:
-        files = glob.glob("images/square_29p/squares_29p_"+label+"_*.png")
+        files = glob.glob("images/square_35p/squares_35p_"+label+"_*.png")
         images[label] = [image.load_img(f, target_size=(CENTER_SIZE, CENTER_SIZE)) for f in files[:10]]
 
     return images
 
 
-center_size = 29
+center_size = 35
 input_tensor = Input(shape=(299, 299, 3))
 
 class AdvLayer(Layer):

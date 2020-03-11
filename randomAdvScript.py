@@ -24,7 +24,7 @@ def loadImages():
     images = dict()
     
     for label in LABELS:
-        files = glob.glob("images/square_29p/squares_29p_"+label+"_*.png")
+        files = glob.glob("images/square_35p/squares_35p_"+label+"_*.png")
         print('images for label', label, len(files))
         images[label] = [image.load_img(f, target_size=(CENTER_SIZE, CENTER_SIZE)) for f in files[:10]]
 
@@ -148,7 +148,7 @@ def train():
 
 
 if __name__ == "__main__":
-    CENTER_SIZE = 29
+    CENTER_SIZE = 35
     LABELS = ['1', '2', '3', '4', '5', '6', '7', '8', '9']
     START = int((299 - CENTER_SIZE) / 2)
     END = int((299 - CENTER_SIZE) / 2 + CENTER_SIZE)
