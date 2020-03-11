@@ -161,8 +161,8 @@ if __name__ == "__main__":
         best_program, best_matrix = train()
         now = datetime.now()
         now_string = now.strftime("%d-%m-%Y_%H-%M-%S")
-        pickle.dump(best_program, open('adv_program-'+now_string, 'wb'))
-        pickle.dump(best_matrix, open('best_matrix-'+now_string, 'wb'))
+        pickle.dump(best_program, open('results/random/adv_program-'+now_string, 'wb'))
+        pickle.dump(best_matrix, open('results/random/best_matrix-'+now_string, 'wb'))
     except Exception as e:
         print('error', e)
 
