@@ -1,2 +1,5 @@
 .vscode
 .ipynb_checkpoints
+venv/
+best_matrix*
+adv_program*
