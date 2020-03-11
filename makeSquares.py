@@ -1,4 +1,5 @@
 from PIL import Image, ImageDraw
+import os
 initI = 3
 initJ = 3
 squareSize = 5
@@ -35,6 +36,11 @@ def powerset(s):
 powerset(grid)
 j = 0
 squareCount = [0,0,0,0,0,0,0,0,0,0]
+
+try:
+    os.stat("./images/square_35p")
+except:
+    os.mkdir("./images/square_35p")
 for i in ls:
     img = Image.new('RGB', (total,total), color='black')
     size = len(i)
