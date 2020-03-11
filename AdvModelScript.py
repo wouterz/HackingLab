@@ -10,85 +10,12 @@ from keras_applications import inception_v3, inception_resnet_v2, resnet
 from keras.preprocessing import image
 from keras.models import Model
 from keras.optimizers import Adam
+from keras.utils import to_categorical
 import matplotlib.pyplot as plt
 from math import log, inf
 from PIL import Image
 from keras import backend as K
-
-
-def evaluate(images: {str: []}, adv_program: []):
-    results = {}
-    for k, class_images in images.items():
-        class_results = []
-        for img in class_images:
-            adv_program[start:end, start:end, :] = img
-#             Append best match
-            class_results.append(classify(adv_program, I_V3)[0][1])
-        
-        results[k] = class_results
-    return results
-
-flatten = lambda l: [item for sublist in l for item in sublist]
-valueDict = dict()
-keyDict = dict()
-
-def results_to_matrix(results):
-    keys = results.keys()
-    for key in keys:
-        if(key not in keyDict.keys()):
-            keyDict[key]=len(keyDict.keys());
-    values = set(flatten(results.values()))
-    for val in values:
-        if(val not in valueDict.keys()):
-            valueDict[val]=len(valueDict.keys())
- #   if(isinstance(matrix, list)):
-    matrix = np.zeros((len(keys), len(valueDict.keys())))
-    for i in results.keys():
-        for j in results[i]:
-            matrix[keyDict[i]][valueDict[j]]+=1
-    #for value in results.values():
-    #    el=[]
-    #    for c in classes: el.append(value.count(c))
-    #    matrix.append(el)
-    return matrix
-
-def computeMatrixLoss(matrix):
-    matrix = matrix/matrix.sum(axis=1)[:,None]
-    usedLabels = []
-    loss=0
-    matrix = matrix.transpose()
-    for i in matrix:
-        highestProbability = 0
-        probabilityID = inf
-        for j in range(0,len(i)):
-            if(j not in usedLabels):
-                if(i[j]>=highestProbability):
-                    highestProbability=i[j]
-                    probabilityID=j
-        usedLabels.append(probabilityID)
-        if(highestProbability==0):
-            loss = loss+10
-        else:
-            loss = loss - log(highestProbability)
-    loss = loss+(len(matrix[1])-len(matrix))*10
-    return loss
-
-def computeLoss(results: {str: []}):
-    label_map = dict()
-    loss = 0
-    for k, class_result in results.items():
-        
-        most_common = max(set(class_result), key = class_result.count)
-        count = class_result.count(most_common)
-        probability = count/len(class_result)
-        
-        label_map[k]= most_common
-        loss = loss - log(probability)
-            
-    print(loss)
-    return loss
-
-# computeLoss({'1':[1,2,2,2,2,3], '2': [2,3,4,3,3,3,1,3,34,4,4,4,4,4]})
+from sklearn.model_selection import train_test_split
 
 CENTER_SIZE = 29
 LABELS = ['1', '2', '3', '4', '5', '6', '7', '8', '9']
@@ -98,44 +25,12 @@ def loadImages():
     images = dict()
     
     for label in LABELS:
-        files = glob.glob("allSquares/squares"+label+"_*.png")
+        files = glob.glob("images/square_29p/squares_29p_"+label+"_*.png")
         images[label] = [image.load_img(f, target_size=(CENTER_SIZE, CENTER_SIZE)) for f in files[:10]]
 
     return images
 
-def train():
-    best_adv_program = []
-    best_loss = inf
-    
-    images = loadImages()
-    bestMatrix = []
-    try:
-        for i in itertools.count(0):
 
-            adv_program = np.random.rand(299,299,3) * 255
-            adv_program = adv_program.astype(int)
-
-            result = evaluate(images, adv_program)
-            mresult = results_to_matrix(result)
-            #loss = computeLoss(result)
-            loss = computeMatrixLoss(mresult)
-            if loss < best_loss:
-                best_loss = loss
-                best_adv_program = adv_program
-                bestMatrix = mresult
-                clear_output(wait=True)
-                display(i, best_loss)
-            print(i, end='\r')
-
-            if loss < 0.05:
-                break
-        return (best_adv_program, bestMatrix)
-    except:
-        return (best_adv_program, bestMatrix)
-
-
-(xt, yt), (xte, yte) = mnist.load_data()
-print(xt[0], yt[0])
 center_size = 29
 input_tensor = Input(shape=(299, 299, 3))
 
@@ -162,7 +57,6 @@ class AdvLayer(Layer):
         adv_img[start:end, start:end, :] = 0
         padx = tf.pad(tf.concat([x], axis=-1),
                       paddings = tf.constant([[0,0], [start, start], [start, start], [0,0]]))
-        print(padx.shape)
         adv_img = tf.nn.tanh(tf.multiply(self.adv_weights, adv_img))+padx
         #adv_img[start:end, start:end, :] = x
         self.out_shape = adv_img.shape
@@ -185,35 +79,44 @@ model.compile(optimizer = Adam(lr=0.05, decay=0.96),
                         loss='categorical_crossentropy',
                         metrics=['accuracy'])
 
+def expandImages(images):
+    for key in images.keys():
+        ls = images[key]
+        if(len(ls)<1000):
+            while(len(ls)<1000):
+                ls = ls+ls
+            images[key]=ls
+            
+
 images = loadImages()
+expandImages(images)
 inputList = []
 outputList = []
 for key in images.keys():
-    for value in images[key]:
-        array = np.zeros(1000)
-        array[int(key)]=1
+    for value in images[key][:1000]:
         newvalue = np.asarray(value)/255
         newvalue = (newvalue-0.5)*2
         inputList.append(np.asarray(value))
-        outputList.append(array)
-    totalNr = len(images[key])
-    while(totalNr<10):
-        inputList.append(np.asarray(value))
-        outputList.append(array)
-        totalNr+=1
+        outputList.append(key)
+   #while(totalNr<100):
+   #     inputList.append(np.asarray(value))
+   #     outputList.append(array)
+   #     totalNr+=1
 
 inputa = np.array(inputList)
 outputa = np.array(outputList)
-print(inputa.shape)
-print(outputa.shape)
-
-model.fit(inputa, outputa,
-                epochs=1,
+outputa = to_categorical(outputa, num_classes=1000)
+x_train, x_valid, y_train, y_valid = train_test_split(inputa, outputa, test_size=0.10, shuffle= True)
+model.fit(x_train, y_train,
+                epochs=100,
                 batch_size=25,
-                validation_split=0.1)
-
+                validation_data=(x_valid, y_valid))
+predVals = []
+for i in inputList:
+    predVal = i.reshape(1,29,29,3)
+    predVals.append(np.argmax(model.predict(predVal)))
 # Save model .hd5
-model.save("adv_reprogramming_inception3.h5")
+#model.save("adv_reprogramming_inception3.h5")
 # Save weights .json
 adv_layer_weights = model.get_layer('adv_layer_1').get_weights() # return numpy array containing 299 elements of size 299x3
 adv_layer = {}
