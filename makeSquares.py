@@ -1,6 +1,6 @@
 from PIL import Image, ImageDraw
-initI = 1
-initJ = 1
+initI = 3
+initJ = 3
 squareSize = 5
 i = initI
 j = initJ
@@ -43,4 +43,4 @@ for i in ls:
             draw = ImageDraw.Draw(img)
             draw.rectangle(t, fill='white')
         squareCount[size]=squareCount[size]+1;
-        img.save('./images/square_29p/squares_29p_'+str(size)+'_'+str(squareCount[size])+'.png')
+        img.save('./images/square_35p/squares_35p_'+str(size)+'_'+str(squareCount[size])+'.png')
