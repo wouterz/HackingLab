@@ -1,6 +1,7 @@
 from PIL import Image, ImageDraw
-initI = 1
-initJ = 1
+import os
+initI = 3
+initJ = 3
 squareSize = 5
 i = initI
 j = initJ
@@ -35,6 +36,11 @@ def powerset(s):
 powerset(grid)
 j = 0
 squareCount = [0,0,0,0,0,0,0,0,0,0]
+
+try:
+    os.stat("./images/square_35p")
+except:
+    os.mkdir("./images/square_35p")
 for i in ls:
     img = Image.new('RGB', (total,total), color='black')
     size = len(i)
@@ -43,4 +49,4 @@ for i in ls:
             draw = ImageDraw.Draw(img)
             draw.rectangle(t, fill='white')
         squareCount[size]=squareCount[size]+1;
-        img.save('./images/square_29p/squares_29p_'+str(size)+'_'+str(squareCount[size])+'.png')
+        img.save('./images/square_35p/squares_35p_'+str(size)+'_'+str(squareCount[size])+'.png')
