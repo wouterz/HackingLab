@@ -141,6 +141,7 @@ if __name__ == "__main__":
     for i in range(0, len(input_list)):
         pred_val = input_list[i].reshape(1,CENTER_SIZE,CENTER_SIZE,3)
         predDict[output_list[i]].append(np.argmax(model.predict(pred_val)))
+    
     for i in predDict.keys():
         print(predDict[i], max(set(predDict[i]), key = predDict[i].count))
         

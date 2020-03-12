@@ -35,8 +35,6 @@
 
 # Uncomment these lines when your job requires this software
 module use /opt/insy/modulefiles
-#module load cuda/10.0 cudnn/10.0-7.3.0.29
-#module load matlab/R2018b
 module load cuda/10.1 cudnn/10.1-7.6.0.64
 
 # Complex or heavy commands should be started with 'srun' (see 'man srun' for more information)

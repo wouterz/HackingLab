@@ -119,6 +119,7 @@ def train(model_name:str, images:{str:[]}) -> ([[]], [[]], float):
     best_matrix = []
     try:
         for i in itertools.count(0):
+            print(i, end="\r")
 
             adv_program = np.random.rand(IMAGE_SIZE,IMAGE_SIZE,3) * 255
             adv_program = adv_program.astype(int)
@@ -131,8 +132,9 @@ def train(model_name:str, images:{str:[]}) -> ([[]], [[]], float):
                 best_loss = loss
                 best_adv_program = adv_program
                 best_matrix = mresult
-
-            print('round: ', i, 'best loss: ', best_loss)
+                print('new best loss: round: ', i, 'loss: ', best_loss)
+            
+            
 
             if best_loss < BEST_LOSS_GOAL:
                 return (best_adv_program, best_matrix, best_loss)
@@ -170,8 +172,8 @@ if __name__ == "__main__":
         now = datetime.now()
         now_string = now.strftime("%d-%m-%Y_%H-%M-%S")
 
-        pickle.dump(best_program, open('results/random/adv_program-%s-%.3f' % (now_string, best_loss), 'wb'))
-        pickle.dump(best_matrix, open('results/random/best_matrix-%s-%.3f' % (now_string, best_loss), 'wb'))
+        pickle.dump(best_program, open('results/random/adv_program-%s_%.3f' % (now_string, best_loss), 'wb'))
+        pickle.dump(best_matrix, open('results/random/best_matrix-%s_%.3f' % (now_string, best_loss), 'wb'))
     except Exception as e:
         print('error', e)
 
