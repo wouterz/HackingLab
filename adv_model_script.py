@@ -33,8 +33,8 @@ def load_images() -> {str:[]}:
 def expand_images(images: {str:[]}) -> {str:[]}:
     for key in images.keys():
         ls = images[key]
-        if(len(ls)<1000):
-            while(len(ls)<1000):
+        if(len(ls)<MAX_IMAGES_PER_CLASS):
+            while(len(ls)<MAX_IMAGES_PER_CLASS):
                 ls = ls+ls
             images[key]=ls
 
@@ -92,7 +92,7 @@ if __name__ == "__main__":
     input_list = []
     output_list = []
     for key in images.keys():
-        for value in images[key][:1000]:
+        for value in images[key][:MAX_IMAGES_PER_CLASS]:
             new_value = np.asarray(value)/255
             new_value = (new_value-0.5)*2
             input_list.append(np.asarray(new_value))
