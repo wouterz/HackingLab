@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from math import log, inf
 from PIL import Image
 import glob
+from datetime import datetime
 
 import keras
 import tensorflow as tf
@@ -76,14 +77,14 @@ if __name__ == "__main__":
     CENTER_SIZE = 35
     IMAGE_SIZE = 299
     LABELS = ['1', '2', '3', '4', '5', '6', '7', '8', '9']
-    MAX_IMAGES_PER_CLASS = 10
+    MAX_IMAGES_PER_CLASS = 1000
 
     ADAM_LEARN_RATE = 0.05
     ADAM_DECAY = 0.96
 
     TEST_SIZE= 0.10
-    EPOCHS = 100
-    BATCH_SIZE = 25
+    EPOCHS = 10000
+    BATCH_SIZE = 50 
     ### END SETUP PARAMETERS ###
 
     # Load / prepare data
@@ -150,7 +151,7 @@ if __name__ == "__main__":
     adv_layer = {}
     adv_layer["weights"] = adv_layer_weights[0].tolist()
 
-    if not path.exists("results/adv/"):
+    if not os.path.exists("results/adv/"):
             os.makedirs("results/adv/")
 
     now = datetime.now()

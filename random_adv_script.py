@@ -112,7 +112,7 @@ def compute_matrix_loss(matrix: [[]]) -> float:
     loss = loss+(len(matrix[1])-len(matrix))*10
     return loss
 
-def train(model_name:str, images:{str:[]}) -> ([[]], [[]]):
+def train(model_name:str, images:{str:[]}) -> ([[]], [[]], float):
     best_adv_program = []
     best_loss = inf
     
@@ -132,17 +132,17 @@ def train(model_name:str, images:{str:[]}) -> ([[]], [[]]):
                 best_adv_program = adv_program
                 best_matrix = mresult
 
-            print('round: ', i, 'best loss: ', best_loss, end='\r')
+            print('round: ', i, 'best loss: ', best_loss)
 
             if best_loss < BEST_LOSS_GOAL:
-                return (best_adv_program, best_matrix)
+                return (best_adv_program, best_matrix, best_loss)
 
     except KeyboardInterrupt as e:
         print('\nkeyboardInterupt:', e)
-        return (best_adv_program, best_matrix)
+        return (best_adv_program, best_matrix, best_loss)
     except Exception as e:
         print('\nexception:', e)
-        return (best_adv_program, best_matrix)
+        return (best_adv_program, best_matrix, best_loss)
 
 
 if __name__ == "__main__":
@@ -162,7 +162,7 @@ if __name__ == "__main__":
         backend=keras.backend, layers=keras.layers, models=keras.models, utils=keras.utils)
 
     try:
-        best_program, best_matrix = train('I_V3', images)
+        best_program, best_matrix, best_loss = train('I_V3', images)
 
         if not os.path.exists("results/random/"):
             os.makedirs("results/random/")
@@ -170,8 +170,8 @@ if __name__ == "__main__":
         now = datetime.now()
         now_string = now.strftime("%d-%m-%Y_%H-%M-%S")
 
-        pickle.dump(best_program, open('results/random/adv_program-%s' % now_string, 'wb'))
-        pickle.dump(best_matrix, open('results/random/best_matrix-%s' % now_string, 'wb'))
+        pickle.dump(best_program, open('results/random/adv_program-%s-%.3f' % (now_string, best_loss), 'wb'))
+        pickle.dump(best_matrix, open('results/random/best_matrix-%s-%.3f' % (now_string, best_loss), 'wb'))
     except Exception as e:
         print('error', e)
 
