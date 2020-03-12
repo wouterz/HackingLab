@@ -134,11 +134,15 @@ if __name__ == "__main__":
                     epochs=EPOCHS,
                     batch_size=BATCH_SIZE,
                     validation_data=(x_valid, y_valid))
-    pred_vals = []
-    for i in input_list:
-        pred_val = i.reshape(1,CENTER_SIZE,CENTER_SIZE,3)
-        pred_vals.append(np.argmax(model.predict(pred_val)))
 
+    #Hardcoded for now
+    predDict = {"1":[],"2":[],"3":[],"4":[],"5":[],"6":[],"7":[],"8":[],"9":[]}
+    for i in range(0, len(input_list)):
+        pred_val = input_list[i].reshape(1,CENTER_SIZE,CENTER_SIZE,3)
+        predDict[output_list[i]].append(np.argmax(model.predict(pred_val)))
+    for i in predDict.keys():
+        print(predDict[i], max(set(predDict[i]), key = predDict[i].count))
+        
     # Write results
 
     # Save weights .json
