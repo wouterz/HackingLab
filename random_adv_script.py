@@ -133,6 +133,7 @@ def train(model_name:str, images:{str:[]}) -> ([[]], [[]], float):
                 best_adv_program = adv_program
                 best_matrix = mresult
                 print('new best loss: round: ', i, 'loss: ', best_loss)
+                writeFiles(best_adv_program, best_matrix, best_loss)
             
             
 
@@ -146,6 +147,18 @@ def train(model_name:str, images:{str:[]}) -> ([[]], [[]], float):
         print('\nexception:', e)
         return (best_adv_program, best_matrix, best_loss)
 
+def writeFiles(adv_program, best_matrix, loss):
+    try:
+        if not os.path.exists("results/random/"):
+            os.makedirs("results/random/")
+
+        now = datetime.now()
+        now_string = now.strftime("%d-%m-%Y_%H-%M-%S")
+
+        pickle.dump(adv_program, open('results/random/adv_program-%s_%.3f' % (now_string, loss), 'wb'))
+        pickle.dump(best_matrix, open('results/random/best_matrix-%s_%.3f' % (now_string, loss), 'wb'))
+    except Exception as e:
+        print('error', e)
 
 if __name__ == "__main__":
     ### SETUP PARAMETERS ###
@@ -165,15 +178,6 @@ if __name__ == "__main__":
 
     try:
         best_program, best_matrix, best_loss = train('I_V3', images)
-
-        if not os.path.exists("results/random/"):
-            os.makedirs("results/random/")
-
-        now = datetime.now()
-        now_string = now.strftime("%d-%m-%Y_%H-%M-%S")
-
-        pickle.dump(best_program, open('results/random/adv_program-%s_%.3f' % (now_string, best_loss), 'wb'))
-        pickle.dump(best_matrix, open('results/random/best_matrix-%s_%.3f' % (now_string, best_loss), 'wb'))
     except Exception as e:
         print('error', e)
 
