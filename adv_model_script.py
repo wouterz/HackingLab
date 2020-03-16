@@ -33,11 +33,12 @@ def load_images() -> {str:[]}:
 
 def expand_images(images: {str:[]}) -> {str:[]}:
     for key in images.keys():
-        ls = images[key]
-        if(len(ls)<MAX_IMAGES_PER_CLASS):
-            while(len(ls)<MAX_IMAGES_PER_CLASS):
-                ls = ls+ls
-            images[key]=ls
+        class_images = images[key]
+        if(len(class_images) < MAX_IMAGES_PER_CLASS):
+            while(len(class_images) < MAX_IMAGES_PER_CLASS):
+                class_images = class_images+class_images
+            images[key]=class_images[:MAX_IMAGES_PER_CLASS]
+
 
 class AdvLayer(Layer):
 
@@ -105,7 +106,7 @@ if __name__ == "__main__":
 
     input_a = np.array(input_list)
     output_a = np.array(output_list)
-    output_a = to_categorical(output_a, num_classes=1000)
+    output_a = to_categorical(output_a)
 
     x_train, x_valid, y_train, y_valid = train_test_split(input_a, output_a, test_size=TEST_SIZE, shuffle= True)
 
@@ -143,7 +144,7 @@ if __name__ == "__main__":
         predDict[output_list[i]].append(np.argmax(model.predict(pred_val)))
     
     for i in predDict.keys():
-        print(predDict[i], max(set(predDict[i]), key = predDict[i].count))
+        print(i, predDict[i], max(set(predDict[i]), key = predDict[i].count))
         
     # Write results
 
