@@ -155,13 +155,14 @@ def writeFiles(adv_program, best_matrix, loss):
         now = datetime.now()
         now_string = now.strftime("%d-%m-%Y_%H-%M-%S")
 
-        pickle.dump(adv_program, open('results/random/adv_program-%s_%.3f' % (now_string, loss), 'wb'))
-        pickle.dump(best_matrix, open('results/random/best_matrix-%s_%.3f' % (now_string, loss), 'wb'))
+        pickle.dump(adv_program, open('%sadv_program-%s_%.3f' % (SAVE_PATH, now_string, loss), 'wb'))
+        pickle.dump(best_matrix, open('%sbest_matrix-%s_%.3f' % (SAVE_PATH, now_string, loss), 'wb'))
     except Exception as e:
         print('error', e)
 
 if __name__ == "__main__":
     ### SETUP PARAMETERS ###
+    SAVE_PATH = 'results/random/'
     CENTER_SIZE = 35
     IMAGE_SIZE = 299
     LABELS = ['1', '2', '3', '4', '5', '6', '7', '8', '9']
