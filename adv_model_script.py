@@ -68,8 +68,8 @@ class AdvLayer(Layer):
         return self.out_shape
 
 def testResults(inception, adv_layer, image_set):
-    start = int((IMAGE_SIZE - CENTER_SIZE) / 2)
-    end = int((IMAGE_SIZE - CENTER_SIZE) / 2 + CENTER_SIZE)
+    start = int(math.floor(IMAGE_SIZE - CENTER_SIZE) / 2)
+    end = int(math.ceil(IMAGE_SIZE - CENTER_SIZE) / 2 + CENTER_SIZE)
     predictions = []
     predictionDict = {}
     for (i,j) in image_set:
@@ -179,7 +179,9 @@ class AdvModel():
                       metrics=[self._accuracy, lr_metric])
 
     def fit_model(self, x_train, y_train):
-        cbks = [keras.callbacks.LearningRateScheduler(schedule=lambda epoch: self.step_decay(epoch=epoch, lr=self.optimizer.lr), verbose=0)]
+        cbks = [keras.callbacks.LearningRateScheduler(schedule=lambda epoch: self.step_decay(epoch=epoch, lr=self.optimizer.lr), verbose=0),
+                keras.callbacks.ModelCheckpoint(filepath = "./results/adv/weights.{epoch:02d}-{loss:.2f}.hdf5", verbose=0,
+                                                save_best_only=False, save_weights_only=False, mode='auto', period=1, monitor="loss")]
         history = self.model.fit(x=x_train, y=y_train,
                             epochs=self.epochs,
                             batch_size=self.batch_size, callbacks=cbks)
@@ -220,14 +222,14 @@ if __name__ == "__main__":
     ### SETUP PARAMETERS ###
     CENTER_SIZE = 35
     IMAGE_SIZE = 299
-    LABELS = ['1', '5', '9']#['1', '2', '3', '4', '5', '6', '7', '8', '9']
-    MAX_IMAGES_PER_CLASS = 1000
+    LABELS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10']
+    MAX_IMAGES_PER_CLASS = 112#1111
 
     ADAM_LEARN_RATE = 0.05
     ADAM_DECAY = 0.96
     DECAY_STEP = 2
     TEST_SIZE= 0.10
-    EPOCHS = 5
+    EPOCHS = 10
     BATCH_SIZE = 25
     ### END SETUP PARAMETERS ###
 
