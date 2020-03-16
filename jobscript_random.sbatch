@@ -12,7 +12,7 @@
 #SBATCH --account=stud-ewi-crs-in4253et
 
 # The default run (wall-clock) time is 1 minute
-#SBATCH --time=1:00:00
+#SBATCH --time=4:00:00
 
 # The default number of parallel tasks per job is 1
 #SBATCH --ntasks=1
