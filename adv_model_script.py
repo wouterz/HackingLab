@@ -1,6 +1,7 @@
-from keras.datasets import mnist
 import numpy as np
 import json
+import math
+from datetime import datetime
 import os
 import matplotlib.pyplot as plt
 from math import log, inf
@@ -31,22 +32,16 @@ def load_images() -> {str:[]}:
 
     return images
 
-def expand_images(images: {str:[]}) -> {str:[]}:
-    for key in images.keys():
-        ls = images[key]
-        if(len(ls)<MAX_IMAGES_PER_CLASS):
-            while(len(ls)<MAX_IMAGES_PER_CLASS):
-                ls = ls+ls
-            images[key]=ls
-
 class AdvLayer(Layer):
 
-    def __init__(self, **kwargs):
+    def __init__(self,image_size=0, center_size=0, **kwargs):
+        self.image_size = image_size
+        self.center_size = center_size
         super(AdvLayer, self).__init__(**kwargs)
 
     def build(self, input_shape):
         # Create a trainable weight variable for this layer.
-        img_shape = (IMAGE_SIZE,IMAGE_SIZE,3)
+        img_shape = (self.image_size, self.image_size,3)
         self.adv_weights = self.add_weight(name='kernel', 
                                       shape=img_shape,
                                       initializer='uniform',
@@ -54,15 +49,14 @@ class AdvLayer(Layer):
         super(AdvLayer, self).build(input_shape)  # Be sure to call this at the end
 
     def call(self, x):
-        
-        start = int((IMAGE_SIZE - CENTER_SIZE) / 2)
-        end = int((IMAGE_SIZE - CENTER_SIZE) / 2 + CENTER_SIZE)
-        input_mask = np.pad(np.zeros([1,CENTER_SIZE,CENTER_SIZE,3]), [[0,0], [start, start], [start, start], [0,0]], 'constant', constant_values=1)
+        start = math.ceil((self.image_size - self.center_size) / 2)
+        start2 = math.ceil((self.image_size - self.center_size) / 2)
+        if not self.center_size%2:
+            start2 = int(math.floor((self.image_size - self.center_size) / 2))
+        input_mask = np.pad(np.zeros([1,self.center_size,self.center_size,3]), [[0,0], [start, start2], [start, start2], [0,0]], 'constant', constant_values=1)
         mask = tf.constant(input_mask, dtype=tf.float32)
-        #adv_img = np.full((IMAGE_SIZE,IMAGE_SIZE,3), 1, dtype=np.float)
-        #adv_img[start:end, start:end, :] = 0
         padx = tf.pad(x,
-                      paddings = tf.constant([[0,0], [start, start], [start, start], [0,0]]))
+                      paddings = tf.constant([[0,0], [start, start2], [start, start2], [0,0]]))
         print(padx)
         adv_img = tf.nn.tanh(tf.multiply(self.adv_weights, mask))+padx
         #adv_img[start:end, start:end, :] = x
@@ -73,7 +67,7 @@ class AdvLayer(Layer):
     def compute_output_shape(self, input_shape):
         return self.out_shape
 
-def testResults(adv_layer, image_set):
+def testResults(inception, adv_layer, image_set):
     start = int((IMAGE_SIZE - CENTER_SIZE) / 2)
     end = int((IMAGE_SIZE - CENTER_SIZE) / 2 + CENTER_SIZE)
     predictions = []
@@ -93,41 +87,157 @@ def label_mapping():
     imagenet_label = np.zeros([1000, len(LABELS)])
     imagenet_label[0:len(LABELS), 0:len(LABELS)] = np.eye(len(LABELS))
     return tf.constant(imagenet_label, dtype=tf.float32)
+
+class DataPreprocessing():
+
+    def __init__(self, imgID, size, labels, numberOfImages):
+        self.imgID = imgID
+        self.images = dict()
+        self.size = size
+        self.labels = labels
+        self.numberOfImages = numberOfImages
+        self.input_list = []
+        self.output_list = []
+        self.createData()
+
+    def createData(self):
+        self.loadImages()
+        return self.makeLists()
+
+    def loadImages(self):
+        images = self.images
+        for label in self.labels:
+            if(self.imgID=="squares"):
+                files = glob.glob("images/square_%dp/squares_%dp_%s_*.png" % (self.size, self.size, label))
+                images[label] = [image.load_img(f, target_size=(self.size, self.size)) for f in files[:self.numberOfImages]]
+        self.expandImages()
+
+    def expandImages(self):
+        images = self.images
+
+        for key in images.keys():
+            ls = images[key]
+            if len(ls) < self.numberOfImages:
+
+                images[key] = ls*math.ceil(self.numberOfImages/len(ls))
+
+    def makeLists(self):
+        images = self.images
+        for key in images.keys():
+            for value in images[key][:MAX_IMAGES_PER_CLASS]:
+                new_value = np.asarray(value, dtype=np.float32)
+                new_value = tf.convert_to_tensor(new_value, dtype=tf.float32)
+                new_value /= 255.
+                new_value -= 0.5
+                new_value *= 2.0
+                self.input_list.append(new_value)
+                self.output_list.append(key)
+        return self.input_list, self.output_list
+
+
+
+
+
+class AdvModel():
+
+    def __init__(self, epochs, batch_size, center_size, image_size, adam_learn_rate, adam_decay, step, model_name):
+        self.step = step
+        self.epochs = epochs
+        self.batch_size = batch_size
+        self.center_size = center_size
+        self.image_size = image_size
+        self.adam_learn_rate = adam_learn_rate
+        self.adam_decay = adam_decay
+        self.optimizer = Adam(lr = adam_learn_rate)
+        self.image_model = self.make_image_model(model_name);
+        self.adam_learn_rate = adam_learn_rate
+        self.adam_decay = adam_decay
+        self.build_model()
+
+    def make_image_model(self, model_name):
+        inception = [];
+        if(model_name=="inception_v3"):
+            inception = inception_v3.InceptionV3(weights='imagenet', input_tensor=Input(shape=(self.image_size, self.image_size, 3)))
+            inception.trainable = False
+        return inception
+
+    def build_model(self):
+
+        # Adv Layer
+        inputs = Input(shape=(self.center_size, self.center_size, 3))
+        al = AdvLayer(image_size=self.image_size, center_size=self.center_size)(inputs)
+        #al.set_image_size(self.image_size)
+        # Combine layers
+        outputs = self.image_model(al)
+
+        model = Model(inputs=[inputs],
+                      outputs=[outputs])
+        self.model = model
+        lr_metric = self.get_lr_metric(self.optimizer)
+        model.compile(optimizer=self.optimizer,
+                      loss=self._loss_tensor,
+                      metrics=[self._accuracy, lr_metric])
+
+    def fit_model(self, x_train, y_train):
+        cbks = [keras.callbacks.LearningRateScheduler(schedule=lambda epoch: self.step_decay(epoch=epoch, lr=self.optimizer.lr), verbose=0)]
+        history = self.model.fit(x=x_train, y=y_train,
+                            epochs=self.epochs,
+                            batch_size=self.batch_size, callbacks=cbks)
+        return history
+
+    # https://stackoverflow.com/questions/52277003/how-to-implement-exponentially-decay-learning-rate-in-keras-by-following-the-glo
+    def step_decay(self, epoch, lr):
+        # initial_lrate = 1.0 # no longer needed
+        drop = self.adam_decay
+        #epochs_drop = 2.0
+        lrate = float(lr * math.pow(drop,  epoch//self.step))
+        return lrate
+
+    def get_model(self):
+        return self.model
+
+    def _loss_tensor(self, y_true, y_pred):
+        disLogits = tf.matmul(y_pred, label_mapping())
+        cross_entropy_loss = tf.reduce_mean(
+            tf.nn.softmax_cross_entropy_with_logits(labels=y_true[:, :len(LABELS)], logits=disLogits))
+        reg_loss = 2e-6 * tf.nn.l2_loss(self.model.get_layer('adv_layer_1').adv_weights)
+        loss = cross_entropy_loss + reg_loss
+        print(loss)
+        return loss
+
+    def _accuracy(self, y_true, y_pred):
+        correct_predictions = tf.equal(tf.argmax(y_pred, 1), tf.argmax(y_true, 1))
+        accuracy = tf.reduce_mean(tf.cast(correct_predictions, tf.float32))
+        return accuracy
+
+    def get_lr_metric(self, optimizer):
+        def lr(y_true, y_pred):
+            return optimizer.lr
+
+        return lr
+
 if __name__ == "__main__":
     ### SETUP PARAMETERS ###
     CENTER_SIZE = 35
     IMAGE_SIZE = 299
-    LABELS = ['1', '2', '3', '4', '5', '6', '7', '8', '9']
-    MAX_IMAGES_PER_CLASS = 100
+    LABELS = ['1', '5', '9']#['1', '2', '3', '4', '5', '6', '7', '8', '9']
+    MAX_IMAGES_PER_CLASS = 1000
 
     ADAM_LEARN_RATE = 0.05
     ADAM_DECAY = 0.96
-
+    DECAY_STEP = 2
     TEST_SIZE= 0.10
-    EPOCHS = 1000
+    EPOCHS = 5
     BATCH_SIZE = 25
     ### END SETUP PARAMETERS ###
 
     # Load / prepare data
-    images = load_images()
-    expand_images(images)
-    input_list = []
-    output_list = []
-    for key in images.keys():
-        for value in images[key][:MAX_IMAGES_PER_CLASS]:
-            new_value = np.asarray(value, dtype=np.float32)
-            new_value = tf.convert_to_tensor(new_value, dtype=tf.float32)
-            new_value/=255.
-            new_value-=0.5
-            new_value*=2.0
-            input_list.append(new_value)
-            output_list.append(key)
-    print("List compiled")
+    data = DataPreprocessing(imgID="squares", size=CENTER_SIZE, labels=LABELS, numberOfImages=MAX_IMAGES_PER_CLASS)
+    input_list, output_list = data.createData()
     #while(totalNr<100):
     #     input_list.append(np.asarray(value))
     #     output_list.append(array)
     #     totalNr+=1
-    print(len(input_list))
     #input_a = np.array(input_list)
     input_a = np.array(tf.convert_to_tensor(input_list))
     print("Creating output")
@@ -136,64 +246,7 @@ if __name__ == "__main__":
     print("Creating train and validation")
     x_train, x_valid, y_train, y_valid = train_test_split(input_a, output_a, test_size=TEST_SIZE, shuffle= True)
     print("Train and validation compiled")
-    # Setup model
-##    for i in range(0,3):
-##        oldImage = x_valid[i]
-##        oldImage = oldImage/2.0
-##        oldImage = oldImage+0.5
-##        oldImage = oldImage*255
-##        oldImage = oldImage.astype(np.uint8)
-##        pil_image = Image.fromarray(oldImage, mode="RGB")
-##        #plt.imshow(pil_image)
-##        val = np.argmax(y_valid[i])
-##        print(val)
-##
-##        pil_image.show(title=str(val))
 
-    # Original model
-
-    print("Compiling model")
-    inception = inception_v3.InceptionV3(weights='imagenet', input_tensor=Input(shape=(IMAGE_SIZE, IMAGE_SIZE, 3)))
-    inception.trainable = False
-
-    # Adv Layer
-    inputs = Input(shape=(CENTER_SIZE, CENTER_SIZE, 3))
-    al = AdvLayer()(inputs)
-
-    print("Compiling model")
-    # Combine layers
-    outputs = inception(al)
-
-    print("Compiling model")
-    model = Model(inputs=[inputs], outputs=[outputs])
-    optimizer = Adam(lr=ADAM_LEARN_RATE, decay=ADAM_DECAY);
-  # tf.compat.v1.disable_eager_execution()
-    #print(outputs)
-    special_output = tf.convert_to_tensor(output_a[0], dtype=tf.float32)
-    #print(output_a[0])
-    #cross_entropy_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels = model(inputs) ,logits = outputs))
-    #reg_loss = 2e-6 * tf.nn.l2_loss(al.get_weights())
-    #loss = cross_entropy_loss + reg_loss
-    #var_list = lambda: model.trainable_weights
-    #optimizer.minimize(loss, var_list)
-    def _loss_tensor(y_true, y_pred):
-        disLogits = tf.matmul(y_pred, label_mapping())
-        cross_entropy_loss = tf.reduce_mean(
-            tf.nn.softmax_cross_entropy_with_logits(labels=y_true[:,:len(LABELS)], logits=disLogits))
-        reg_loss = 2e-6 * tf.nn.l2_loss(model.get_layer('adv_layer_1').adv_weights)
-        loss = cross_entropy_loss + reg_loss
-        print(loss)
-        return loss
-    print("Compiling model")
-    model.compile(optimizer = optimizer,
-                            loss=_loss_tensor
-                            ,metrics=['accuracy'])
-
-    # Train
-    history = model.fit(x=x_train, y=y_train,
-                    epochs=EPOCHS,
-                    batch_size=BATCH_SIZE)
-                    #,validation_data=(x_valid, y_valid))
 
     #Hardcoded for now
 ##    predDict = {"1":[],"2":[],"3":[],"4":[],"5":[],"6":[],"7":[],"8":[],"9":[]}
@@ -204,23 +257,42 @@ if __name__ == "__main__":
 ##        print(predDict[i], max(set(predDict[i]), key = predDict[i].count))
         
     # Write results
+    print("Compiling model")
+    a_model = AdvModel(epochs=EPOCHS, model_name="inception_v3", batch_size=BATCH_SIZE, center_size=CENTER_SIZE, image_size=IMAGE_SIZE,
+                       adam_learn_rate=ADAM_LEARN_RATE, adam_decay=ADAM_DECAY, step=DECAY_STEP)
+    print("fit model")
+    a_model.fit_model(x_train, y_train)
+    model = a_model.get_model()
+    image_model = a_model.image_model
 
-    # Save weights .json
-    adv_layer_weights = model.get_layer('adv_layer_1').get_weights() # return numpy array containing 299 elements of size 299x3
-    adv_layer = {}
-    adv_layer["weights"] = adv_layer_weights[0].tolist()
-    input_aR = []
-    results = testResults(adv_layer_weights[0], list(zip(input_a, output_a)))
+    adv_layer_weights = model.get_layer(index=1).get_weights() # return numpy array containing 299 elements of size 299x3
+
+    results = testResults(image_model, adv_layer_weights[0], list(zip(x_valid, y_valid)))
+    ProbabilityList = []
     for i in results.keys():
-        print(str(i)+"\n")
+        print(str(i) + "\n")
+        allClasses = []
+        classCount = []
         for j in results[i]:
-            print(j)
-    #if not path.exists("results/adv/"):
-    #        os.makedirs("results/adv/")
+            allClasses.append(j[0][1])
+        for j in set(allClasses):
+            classCount.append((j, allClasses.count(j)/len(allClasses)))
+            classCount.sort(key=lambda x: x[1], reverse=True)
+        ProbabilityList.append((i, classCount))
+    ProbabilityList.sort(key=lambda x: x[0])
+    for i,j in ProbabilityList:
+        print(i)
+        print(j)
+    # Save weights .json
+    adv_layer = {"weights": adv_layer_weights[0].tolist()}
 
-    #now = datetime.now()
-    #now_string = now.strftime("%d-%m-%Y_%H-%M-%S")
-    #with open("results/adv/adv_layer-%s.json" % now_string, 'w') as outfile:
-    #    json.dump(adv_layer, outfile)
+
+    if not os.path.exists("results/adv/"):
+            os.makedirs("results/adv/")
+
+    now = datetime.now()
+    now_string = now.strftime("%d-%m-%Y_%H-%M-%S")
+    with open("results/adv/adv_layer-%s.json" % now_string, 'w') as outfile:
+        json.dump(adv_layer, outfile)
     
     
