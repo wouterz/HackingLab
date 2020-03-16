@@ -170,7 +170,7 @@ class AdvModel():
     def fit_model(self, x_train, y_train):
         cbks = [keras.callbacks.LearningRateScheduler(schedule=lambda epoch: self.step_decay(epoch=epoch, lr=self.optimizer.lr), verbose=0),
                 keras.callbacks.ModelCheckpoint(filepath = "./results/adv/weights.{epoch:02d}-{loss:.2f}.hdf5", verbose=0,
-                                                save_best_only=False, save_weights_only=False, mode='auto', period=1, monitor="loss")]
+                                                save_best_only=False, save_weights_only=True, mode='auto', period=100, monitor="loss")]
         history = self.model.fit(x=x_train, y=y_train,
                             epochs=self.epochs,
                             batch_size=self.batch_size, callbacks=cbks)
@@ -211,7 +211,7 @@ if __name__ == "__main__":
     ### SETUP PARAMETERS ###
     CENTER_SIZE = 35
     IMAGE_SIZE = 299
-    LABELS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10']
+    LABELS = ['1', '2', '3', '4', '5', '6', '7', '8', '9']
     MAX_IMAGES_PER_CLASS = 112#1111
 
     ADAM_LEARN_RATE = 0.05
