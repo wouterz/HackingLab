@@ -21,27 +21,6 @@ from keras.utils import to_categorical
 from keras import backend as K
 from sklearn.model_selection import train_test_split
 
-
-
-
-def load_images() -> {str:[]}:
-    images = dict()
-    
-    for label in LABELS:
-        files = glob.glob("images/square_%dp/squares_%dp_%s_*.png" % (CENTER_SIZE, CENTER_SIZE, label))
-        images[label] = [image.load_img(f, target_size=(CENTER_SIZE, CENTER_SIZE)) for f in files[:MAX_IMAGES_PER_CLASS]]
-
-    return images
-
-def expand_images(images: {str:[]}) -> {str:[]}:
-    for key in images.keys():
-        class_images = images[key]
-        if(len(class_images) < MAX_IMAGES_PER_CLASS):
-            while(len(class_images) < MAX_IMAGES_PER_CLASS):
-                class_images = class_images+class_images
-            images[key]=class_images[:MAX_IMAGES_PER_CLASS]
-
-
 class AdvLayer(Layer):
 
     def __init__(self,image_size=0, center_size=0, **kwargs):
@@ -159,13 +138,13 @@ class AdvModel():
         self.adam_learn_rate = adam_learn_rate
         self.adam_decay = adam_decay
         self.optimizer = Adam(lr = adam_learn_rate)
-        self.image_model = self.make_image_model(model_name);
+        self.image_model = self.make_image_model(model_name)
         self.adam_learn_rate = adam_learn_rate
         self.adam_decay = adam_decay
         self.build_model()
 
     def make_image_model(self, model_name):
-        inception = [];
+        inception = []
         if(model_name=="inception_v3"):
             inception = inception_v3.InceptionV3(weights='imagenet', input_tensor=Input(shape=(self.image_size, self.image_size, 3)))
             inception.trainable = False
