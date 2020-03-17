@@ -31,7 +31,7 @@ class AdvLayer(Layer):
     def build(self, input_shape):
         # Create a trainable weight variable for this layer.
         img_shape = (self.image_size, self.image_size,3)
-        self.adv_weights = self.add_weight(name='kernel', 
+        self.adv_weights = self.add_weight(name='kernel',
                                       shape=img_shape,
                                       initializer='uniform',
                                       trainable=True)
@@ -68,7 +68,7 @@ def testResults(inception, adv_layer, image_set):
         prediction = inception.predict(adv_layer2)
         if key not in predictionDict.keys():
             predictionDict[key]=[]
-        
+
         predictionDict[key].append(inception_v3.decode_predictions(prediction, top=2, utils=keras.utils)[0])
     return predictionDict
 
@@ -87,7 +87,6 @@ class DataPreprocessing():
         self.numberOfImages = numberOfImages
         self.input_list = []
         self.output_list = []
-        self.createData()
 
     def createData(self):
         self.loadImages()
@@ -139,8 +138,6 @@ class AdvModel():
         self.adam_decay = adam_decay
         self.optimizer = Adam(lr = adam_learn_rate)
         self.image_model = self.make_image_model(model_name)
-        self.adam_learn_rate = adam_learn_rate
-        self.adam_decay = adam_decay
         self.build_model()
 
     def make_image_model(self, model_name):
@@ -168,7 +165,11 @@ class AdvModel():
                       metrics=[self._accuracy, lr_metric])
 
     def fit_model(self, x_train, y_train):
+<<<<<<< HEAD
         cbks = [keras.callbacks.LearningRateScheduler(schedule=lambda epoch: self.step_decay(epoch=epoch), verbose=1),
+=======
+        cbks = [keras.callbacks.LearningRateScheduler(schedule=lambda epoch: self.step_decay(epoch=epoch, lr=self.adam_learn_rate), verbose=1),
+>>>>>>> a528755247e1b2c1b3c0c6961e01ecb780408dee
                 keras.callbacks.ModelCheckpoint(filepath = "./results/adv/weights.{epoch:02d}-{loss:.2f}.hdf5", verbose=0,
                                                 save_best_only=True, save_weights_only=False, mode='auto', period=50, monitor="loss")]
         history = self.model.fit(x=x_train, y=y_train,
@@ -211,14 +212,14 @@ if __name__ == "__main__":
     CENTER_SIZE = 35
     IMAGE_SIZE = 299
     LABELS = ['1', '2', '3', '4', '5', '6', '7', '8', '9']
-    MAX_IMAGES_PER_CLASS = 112#1111
+    MAX_IMAGES_PER_CLASS = 1111
 
     ADAM_LEARN_RATE = 0.05
     ADAM_DECAY = 0.96
     DECAY_STEP = 2
     TEST_SIZE= 0.10
     EPOCHS = 10000
-    BATCH_SIZE = 50 
+    BATCH_SIZE = 50
     ### END SETUP PARAMETERS ###
 
     # Load / prepare data
@@ -245,7 +246,7 @@ if __name__ == "__main__":
 ##        predDict[output_list[i]].append(np.argmax(model.predict(input_list[i])))
 ##    for i in predDict.keys():
 ##        print(predDict[i], max(set(predDict[i]), key = predDict[i].count))
-        
+
     # Write results
     print("Compiling model")
     a_model = AdvModel(epochs=EPOCHS, model_name="inception_v3", batch_size=BATCH_SIZE, center_size=CENTER_SIZE, image_size=IMAGE_SIZE,
@@ -284,5 +285,3 @@ if __name__ == "__main__":
     now_string = now.strftime("%d-%m-%Y_%H-%M-%S")
     with open("results/adv/adv_layer-%s.json" % now_string, 'w') as outfile:
         json.dump(adv_layer, outfile)
-    
-    
