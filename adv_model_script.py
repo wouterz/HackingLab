@@ -56,7 +56,7 @@ class AdvLayer(Layer):
     def compute_output_shape(self, input_shape):
         return self.out_shape
 
-def testResults(inception, adv_layer, image_set):
+def testResults(inception, IMAGE_SIZE, CENTER_SIZE, adv_layer, image_set):
     start = int(math.floor(IMAGE_SIZE - CENTER_SIZE) / 2)
     end = int(math.ceil(IMAGE_SIZE - CENTER_SIZE) / 2 + CENTER_SIZE)
     predictions = []
@@ -69,7 +69,7 @@ def testResults(inception, adv_layer, image_set):
         if key not in predictionDict.keys():
             predictionDict[key]=[]
 
-        predictionDict[key].append(inception_v3.decode_predictions(prediction, top=2, utils=keras.utils)[0])
+        predictionDict[key].append(inception_v3.decode_predictions(prediction, top=5, utils=keras.utils)[0])
     return predictionDict
 
 def label_mapping():
@@ -112,7 +112,7 @@ class DataPreprocessing():
     def makeLists(self):
         images = self.images
         for key in images.keys():
-            for value in images[key][:MAX_IMAGES_PER_CLASS]:
+            for value in images[key][:self.numberOfImages]:
                 new_value = np.asarray(value, dtype=np.float32)
                 new_value = tf.convert_to_tensor(new_value, dtype=tf.float32)
                 new_value /= 255.
@@ -128,7 +128,8 @@ class DataPreprocessing():
 
 class AdvModel():
 
-    def __init__(self, epochs, batch_size, center_size, image_size, adam_learn_rate, adam_decay, step, model_name):
+    def __init__(self, epochs, batch_size, center_size, image_size, adam_learn_rate, adam_decay, step, model_name, labels):
+        self.labels = labels
         self.step = step
         self.epochs = epochs
         self.batch_size = batch_size
@@ -187,7 +188,7 @@ class AdvModel():
     def _loss_tensor(self, y_true, y_pred):
         disLogits = tf.matmul(y_pred, label_mapping())
         cross_entropy_loss = tf.reduce_mean(
-            tf.nn.softmax_cross_entropy_with_logits(labels=y_true[:, :len(LABELS)], logits=disLogits))
+            tf.nn.softmax_cross_entropy_with_logits(labels=y_true[:, :len(self.labels)], logits=disLogits))
         reg_loss = 2e-6 * tf.nn.l2_loss(self.model.get_layer('adv_layer_1').adv_weights)
         loss = cross_entropy_loss + reg_loss
         print(loss)
@@ -255,7 +256,7 @@ if __name__ == "__main__":
 
     adv_layer_weights = model.get_layer(index=1).get_weights() # return numpy array containing 299 elements of size 299x3
 
-    results = testResults(image_model, adv_layer_weights[0], list(zip(x_valid, y_valid)))
+    results = testResults(image_model, IMAGE_SIZE, CENTER_SIZE, adv_layer_weights[0], list(zip(x_valid, y_valid)))
     ProbabilityList = []
     for i in results.keys():
         print(str(i) + "\n")
