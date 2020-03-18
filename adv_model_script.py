@@ -130,6 +130,7 @@ class AdvModel():
 
     def __init__(self, epochs, batch_size, center_size, image_size, adam_learn_rate, adam_decay, step, model_name, labels):
         self.labels = labels
+        self.previousEpoch = 0
         self.step = step
         self.epochs = epochs
         self.batch_size = batch_size
@@ -165,20 +166,25 @@ class AdvModel():
                       loss=self._loss_tensor,
                       metrics=[self._accuracy, lr_metric])
 
-    def fit_model(self, x_train, y_train):
+    def fit_model(self, x_train, y_train, currentEpoch=0):
         cbks = [keras.callbacks.LearningRateScheduler(schedule=lambda epoch: self.step_decay(epoch=epoch), verbose=1),
                 keras.callbacks.ModelCheckpoint(filepath = "./results/adv/weights.{epoch:02d}-{loss:.2f}.hdf5", verbose=0,
                                                 save_best_only=True, save_weights_only=False, mode='auto', period=50, monitor="loss")]
         history = self.model.fit(x=x_train, y=y_train,
-                            epochs=self.epochs,
+                            epochs=self.epochs-currentEpoch,
                             batch_size=self.batch_size, callbacks=cbks)
         return history
 
+    def continue_model(self, currentEpoch, weights):
+        self.model.load_weights(weights)
+        self.previousEpoch=currentEpoch
+        self.fit_model(x_train, y_train, currentEpoch)
+        
     # https://stackoverflow.com/questions/52277003/how-to-implement-exponentially-decay-learning-rate-in-keras-by-following-the-glo
     def step_decay(self, epoch):
         lr = self.adam_learn_rate
         drop = self.adam_decay
-        lrate = float(lr * math.pow(drop,  epoch//self.step))
+        lrate = float(lr * math.pow(drop,  (epoch+self.previousEpoch)//self.step))
         return lrate
 
     def get_model(self):
@@ -247,9 +253,11 @@ if __name__ == "__main__":
     # Write results
     print("Compiling model")
     a_model = AdvModel(epochs=EPOCHS, model_name="inception_v3", batch_size=BATCH_SIZE, center_size=CENTER_SIZE, image_size=IMAGE_SIZE,
-                       adam_learn_rate=ADAM_LEARN_RATE, adam_decay=ADAM_DECAY, step=DECAY_STEP)
+                       adam_learn_rate=ADAM_LEARN_RATE, adam_decay=ADAM_DECAY, step=DECAY_STEP, labels=LABELS)
     print("fit model")
     a_model.fit_model(x_train, y_train)
+    #a_model.continue_model(50, "./results/ClusterResults/map1/weights.50-1.80.hdf5")
+    
     model = a_model.get_model()
     image_model = a_model.image_model
 
