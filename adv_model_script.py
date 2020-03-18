@@ -166,7 +166,7 @@ class AdvModel():
                       metrics=[self._accuracy, lr_metric])
 
     def fit_model(self, x_train, y_train):
-        cbks = [keras.callbacks.LearningRateScheduler(schedule=lambda epoch: self.step_decay(epoch=epoch, lr=self.adam_learn_rate), verbose=1),
+        cbks = [keras.callbacks.LearningRateScheduler(schedule=lambda epoch: self.step_decay(epoch=epoch), verbose=1),
                 keras.callbacks.ModelCheckpoint(filepath = "./results/adv/weights.{epoch:02d}-{loss:.2f}.hdf5", verbose=0,
                                                 save_best_only=True, save_weights_only=False, mode='auto', period=50, monitor="loss")]
         history = self.model.fit(x=x_train, y=y_train,
@@ -175,10 +175,9 @@ class AdvModel():
         return history
 
     # https://stackoverflow.com/questions/52277003/how-to-implement-exponentially-decay-learning-rate-in-keras-by-following-the-glo
-    def step_decay(self, epoch, lr):
-        # initial_lrate = 1.0 # no longer needed
+    def step_decay(self, epoch):
+        lr = self.adam_learn_rate
         drop = self.adam_decay
-        #epochs_drop = 2.0
         lrate = float(lr * math.pow(drop,  epoch//self.step))
         return lrate
 
