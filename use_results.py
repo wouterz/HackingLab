@@ -15,6 +15,9 @@ import math
 import numpy as np
 import h5py
 
+import sys
+import os
+
 def returnProbabilities(position):
     ProbabilityList = []
     for i in results.keys():
@@ -39,8 +42,13 @@ inception.trainable = False
 dp = ams.DataPreprocessing("squares", 35, [1, 2, 3, 4, 5, 6, 7, 8, 9], 100)
 x, y = dp.createData()
 
+filename = sys.argv[1]
+if not os.path.isfile(filename):
+    print('file %s not found' % filename)
+    exit(1)
+
 y = to_categorical(y, num_classes=1000, dtype='float32')
-hf = h5py.File("results/ClusterResults/map4/weights.10-1.69.hdf5")
+hf = h5py.File(filename)
 array = np.array(hf['model_weights']['adv_layer_1']['adv_layer_1']['kernel:0'])
 
 results = ams.testResults(inception, 299, 35, array, list(zip(x, y)))

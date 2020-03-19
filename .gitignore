@@ -7,3 +7,5 @@ images/
 *.out
 *.out.csv
 results/
+output100-2500-25-10*
+__pycache__
