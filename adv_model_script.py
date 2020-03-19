@@ -63,7 +63,7 @@ def testResults(inception, IMAGE_SIZE, CENTER_SIZE, adv_layer, image_set):
     predictionDict = {}
     for (i,j) in image_set:
         key = np.argwhere(j==1)[0][0]
-        adv_layer[start:end,start:end,:]=i;
+        adv_layer[start:end,start:end,:]=i
         adv_layer2 = adv_layer.reshape(1,299,299,3)
         prediction = inception.predict(adv_layer2)
         if key not in predictionDict.keys():
@@ -191,12 +191,10 @@ class AdvModel():
         return self.model
 
     def _loss_tensor(self, y_true, y_pred):
-        disLogits = tf.matmul(y_pred, label_mapping())
         cross_entropy_loss = tf.reduce_mean(
-            tf.nn.softmax_cross_entropy_with_logits(labels=y_true[:, :len(self.labels)], logits=disLogits))
+            tf.nn.softmax_cross_entropy_with_logits(labels=y_true, logits=y_pred))
         reg_loss = 2e-6 * tf.nn.l2_loss(self.model.get_layer('adv_layer_1').adv_weights)
         loss = cross_entropy_loss + reg_loss
-        print(loss)
         return loss
 
     def _accuracy(self, y_true, y_pred):
@@ -255,6 +253,8 @@ if __name__ == "__main__":
     a_model = AdvModel(epochs=EPOCHS, model_name="inception_v3", batch_size=BATCH_SIZE, center_size=CENTER_SIZE, image_size=IMAGE_SIZE,
                        adam_learn_rate=ADAM_LEARN_RATE, adam_decay=ADAM_DECAY, step=DECAY_STEP, labels=LABELS)
     print("fit model")
+
+    
     a_model.fit_model(x_train, y_train)
     #a_model.continue_model(50, "./results/ClusterResults/map1/weights.50-1.80.hdf5")
     
