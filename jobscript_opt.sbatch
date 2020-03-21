@@ -42,4 +42,4 @@ module load cuda/10.1 cudnn/10.1-7.6.0.64
 # Use this simple command to check that your sbatch settings are working (verify the resources allocated in the usage statistics)
 #srun hostname
 
-srun python3 ./adv_model_script.py
+srun python3 ./adv_model_script.py ./results/adv/

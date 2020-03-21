@@ -1,54 +1,51 @@
 import numpy as np
 import json
 import math
-from datetime import datetime
 import os
-import matplotlib.pyplot as plt
-from math import log, inf
-from PIL import Image
 import glob
 from datetime import datetime
+import sys
 
-import keras
 import tensorflow as tf
-from keras.engine.topology import Layer
-from keras.layers import Input
-from keras.applications import inception_v3, inception_resnet_v2, resnet
-from keras.preprocessing import image
-from keras.models import Model
-from keras.optimizers import Adam
-from keras.utils import to_categorical
-from keras import backend as K
+from tensorflow.keras.layers import Layer, Input
+from tensorflow.keras.applications import inception_v3, inception_resnet_v2, resnet
+from tensorflow.keras.preprocessing import image
+from tensorflow.keras.models import Model
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.utils import to_categorical
+from tensorflow.keras import backend as K
 from sklearn.model_selection import train_test_split
+
 
 class AdvLayer(Layer):
 
-    def __init__(self,image_size=0, center_size=0, **kwargs):
+    def __init__(self, image_size=0, center_size=0, **kwargs):
         self.image_size = image_size
         self.center_size = center_size
         super(AdvLayer, self).__init__(**kwargs)
 
     def build(self, input_shape):
         # Create a trainable weight variable for this layer.
-        img_shape = (self.image_size, self.image_size,3)
+        img_shape = (self.image_size, self.image_size, 3)
         self.adv_weights = self.add_weight(name='kernel',
-                                      shape=img_shape,
-                                      initializer='uniform',
-                                      trainable=True)
+                                           shape=img_shape,
+                                           initializer='uniform',
+                                           trainable=True)
         super(AdvLayer, self).build(input_shape)  # Be sure to call this at the end
 
     def call(self, x):
         start = math.ceil((self.image_size - self.center_size) / 2)
         start2 = math.ceil((self.image_size - self.center_size) / 2)
-        if not self.center_size%2:
+        if not self.center_size % 2:
             start2 = int(math.floor((self.image_size - self.center_size) / 2))
-        input_mask = np.pad(np.zeros([1,self.center_size,self.center_size,3]), [[0,0], [start, start2], [start, start2], [0,0]], 'constant', constant_values=1)
+        input_mask = np.pad(np.zeros([1, self.center_size, self.center_size, 3]),
+                            [[0, 0], [start, start2], [start, start2], [0, 0]], 'constant', constant_values=1)
         mask = tf.constant(input_mask, dtype=tf.float32)
         padx = tf.pad(x,
-                      paddings = tf.constant([[0,0], [start, start2], [start, start2], [0,0]]))
+                      paddings=tf.constant([[0, 0], [start, start2], [start, start2], [0, 0]]))
         print(padx)
-        adv_img = tf.nn.tanh(tf.multiply(self.adv_weights, mask))+padx
-        #adv_img[start:end, start:end, :] = x
+        adv_img = tf.nn.tanh(tf.multiply(self.adv_weights, mask)) + padx
+        # adv_img[start:end, start:end, :] = x
         self.out_shape = adv_img.shape
 
         return adv_img
@@ -56,28 +53,31 @@ class AdvLayer(Layer):
     def compute_output_shape(self, input_shape):
         return self.out_shape
 
+
 def testResults(inception, IMAGE_SIZE, CENTER_SIZE, adv_layer, image_set):
     start = int(math.floor(IMAGE_SIZE - CENTER_SIZE) / 2)
     end = int(math.ceil(IMAGE_SIZE - CENTER_SIZE) / 2 + CENTER_SIZE)
     predictions = []
     predictionDict = {}
-    for (i,j) in image_set:
-        key = np.argwhere(j==1)[0][0]
-        adv_layer[start:end,start:end,:]=i
-        adv_layer2 = adv_layer.reshape(1,299,299,3)
+    for (i, j) in image_set:
+        key = np.argwhere(j == 1)[0][0]
+        adv_layer[start:end, start:end, :] = i
+        adv_layer2 = adv_layer.reshape(1, 299, 299, 3)
         prediction = inception.predict(adv_layer2)
         if key not in predictionDict.keys():
-            predictionDict[key]=[]
+            predictionDict[key] = []
 
-        predictionDict[key].append(inception_v3.decode_predictions(prediction, top=5, utils=keras.utils)[0])
+        predictionDict[key].append(inception_v3.decode_predictions(prediction, top=5, utils=tf.keras.utils)[0])
     return predictionDict
+
 
 def label_mapping():
     imagenet_label = np.zeros([1000, len(LABELS)])
     imagenet_label[0:len(LABELS), 0:len(LABELS)] = np.eye(len(LABELS))
     return tf.constant(imagenet_label, dtype=tf.float32)
 
-class DataPreprocessing():
+
+class DataPreprocessing:
 
     def __init__(self, imgID, size, labels, numberOfImages):
         self.imgID = imgID
@@ -95,9 +95,10 @@ class DataPreprocessing():
     def loadImages(self):
         images = self.images
         for label in self.labels:
-            if(self.imgID=="squares"):
+            if (self.imgID == "squares"):
                 files = glob.glob("images/square_%dp/squares_%dp_%s_*.png" % (self.size, self.size, label))
-                images[label] = [image.load_img(f, target_size=(self.size, self.size)) for f in files[:self.numberOfImages]]
+                images[label] = [image.load_img(f, target_size=(self.size, self.size)) for f in
+                                 files[:self.numberOfImages]]
         self.expandImages()
 
     def expandImages(self):
@@ -106,8 +107,7 @@ class DataPreprocessing():
         for key in images.keys():
             ls = images[key]
             if len(ls) < self.numberOfImages:
-
-                images[key] = ls*math.ceil(self.numberOfImages/len(ls))
+                images[key] = ls * math.ceil(self.numberOfImages / len(ls))
 
     def makeLists(self):
         images = self.images
@@ -123,12 +123,10 @@ class DataPreprocessing():
         return self.input_list, self.output_list
 
 
+class AdvModel:
 
-
-
-class AdvModel():
-
-    def __init__(self, epochs, batch_size, center_size, image_size, adam_learn_rate, adam_decay, step, model_name, labels):
+    def __init__(self, epochs, batch_size, center_size, image_size, adam_learn_rate, adam_decay, step, model_name,
+                 labels, save_path):
         self.labels = labels
         self.previousEpoch = 0
         self.step = step
@@ -138,23 +136,24 @@ class AdvModel():
         self.image_size = image_size
         self.adam_learn_rate = adam_learn_rate
         self.adam_decay = adam_decay
-        self.optimizer = Adam(lr = adam_learn_rate)
+        self.optimizer = Adam(lr=adam_learn_rate)
         self.image_model = self.make_image_model(model_name)
         self.build_model()
+        self.save_path = save_path
 
     def make_image_model(self, model_name):
         inception = []
-        if(model_name=="inception_v3"):
-            inception = inception_v3.InceptionV3(weights='imagenet', input_tensor=Input(shape=(self.image_size, self.image_size, 3)))
+        if (model_name == "inception_v3"):
+            inception = inception_v3.InceptionV3(weights='imagenet',
+                                                 input_tensor=Input(shape=(self.image_size, self.image_size, 3)))
             inception.trainable = False
         return inception
 
     def build_model(self):
-
         # Adv Layer
         inputs = Input(shape=(self.center_size, self.center_size, 3))
         al = AdvLayer(image_size=self.image_size, center_size=self.center_size)(inputs)
-        #al.set_image_size(self.image_size)
+        # al.set_image_size(self.image_size)
         # Combine layers
         outputs = self.image_model(al)
 
@@ -167,24 +166,26 @@ class AdvModel():
                       metrics=[self._accuracy, lr_metric])
 
     def fit_model(self, x_train, y_train, currentEpoch=0):
-        cbks = [keras.callbacks.LearningRateScheduler(schedule=lambda epoch: self.step_decay(epoch=epoch), verbose=1),
-                keras.callbacks.ModelCheckpoint(filepath = "./results/adv/weights.{epoch:02d}-{loss:.2f}.hdf5", verbose=0,
-                                                save_best_only=True, save_weights_only=False, mode='auto', period=50, monitor="loss")]
+        cbks = [
+            tf.keras.callbacks.LearningRateScheduler(schedule=lambda epoch: self.step_decay(epoch=epoch), verbose=1),
+            tf.keras.callbacks.ModelCheckpoint(filepath=self.save_path+"weights.{epoch:02d}-{loss:.2f}.hdf5", verbose=0,
+                                               save_best_only=True, save_weights_only=False, mode='auto', period=50,
+                                               monitor="loss")]
         history = self.model.fit(x=x_train, y=y_train,
-                            epochs=self.epochs-currentEpoch,
-                            batch_size=self.batch_size, callbacks=cbks)
+                                 epochs=self.epochs - currentEpoch,
+                                 batch_size=self.batch_size, callbacks=cbks)
         return history
 
     def continue_model(self, currentEpoch, weights):
         self.model.load_weights(weights)
-        self.previousEpoch=currentEpoch
+        self.previousEpoch = currentEpoch
         self.fit_model(x_train, y_train, currentEpoch)
-        
+
     # https://stackoverflow.com/questions/52277003/how-to-implement-exponentially-decay-learning-rate-in-keras-by-following-the-glo
     def step_decay(self, epoch):
         lr = self.adam_learn_rate
         drop = self.adam_decay
-        lrate = float(lr * math.pow(drop,  (epoch+self.previousEpoch)//self.step))
+        lrate = float(lr * math.pow(drop, (epoch + self.previousEpoch) // self.step))
         return lrate
 
     def get_model(self):
@@ -208,6 +209,7 @@ class AdvModel():
 
         return lr
 
+
 if __name__ == "__main__":
     ### SETUP PARAMETERS ###
     CENTER_SIZE = 35
@@ -218,50 +220,50 @@ if __name__ == "__main__":
     ADAM_LEARN_RATE = 0.05
     ADAM_DECAY = 0.96
     DECAY_STEP = 2
-    TEST_SIZE= 0.10
+    TEST_SIZE = 0.10
     EPOCHS = 10000
     BATCH_SIZE = 50
+
+    SAVE_PATH = sys.argv[1]
+
+    if len(sys.argv) == 4:
+        CONTINUE_MODEL = sys.argv[2]
+        CONTINUE_MODEL_EPOCHS = int(sys.argv[3])
     ### END SETUP PARAMETERS ###
+    if not os.path.exists(SAVE_PATH):
+        os.makedirs(SAVE_PATH)
 
     # Load / prepare data
     data = DataPreprocessing(imgID="squares", size=CENTER_SIZE, labels=LABELS, numberOfImages=MAX_IMAGES_PER_CLASS)
     input_list, output_list = data.createData()
-    #while(totalNr<100):
-    #     input_list.append(np.asarray(value))
-    #     output_list.append(array)
-    #     totalNr+=1
-    #input_a = np.array(input_list)
+
     input_a = np.array(tf.convert_to_tensor(input_list))
     print("Creating output")
     output_a = np.array(output_list, dtype=np.float32)
     output_a = to_categorical(output_a, num_classes=1000, dtype='float32')
     print("Creating train and validation")
-    x_train, x_valid, y_train, y_valid = train_test_split(input_a, output_a, test_size=TEST_SIZE, shuffle= True)
+    x_train, x_valid, y_train, y_valid = train_test_split(input_a, output_a, test_size=TEST_SIZE, shuffle=True)
     print("Train and validation compiled")
-
-
-    #Hardcoded for now
-##    predDict = {"1":[],"2":[],"3":[],"4":[],"5":[],"6":[],"7":[],"8":[],"9":[]}
-##    for i in range(0, len(input_list)):
-##        #pred_val = input_list[i].reshape(1,CENTER_SIZE,CENTER_SIZE,3)
-##        predDict[output_list[i]].append(np.argmax(model.predict(input_list[i])))
-##    for i in predDict.keys():
-##        print(predDict[i], max(set(predDict[i]), key = predDict[i].count))
 
     # Write results
     print("Compiling model")
-    a_model = AdvModel(epochs=EPOCHS, model_name="inception_v3", batch_size=BATCH_SIZE, center_size=CENTER_SIZE, image_size=IMAGE_SIZE,
-                       adam_learn_rate=ADAM_LEARN_RATE, adam_decay=ADAM_DECAY, step=DECAY_STEP, labels=LABELS)
+    a_model = AdvModel(epochs=EPOCHS, model_name="inception_v3", batch_size=BATCH_SIZE, center_size=CENTER_SIZE,
+                       image_size=IMAGE_SIZE,
+                       adam_learn_rate=ADAM_LEARN_RATE, adam_decay=ADAM_DECAY, step=DECAY_STEP, labels=LABELS, save_path=SAVE_PATH)
     print("fit model")
 
-    
-    a_model.fit_model(x_train, y_train)
-    #a_model.continue_model(50, "./results/ClusterResults/map1/weights.50-1.80.hdf5")
-    
+    if len(sys.argv) != 3:
+        print("Fit new model")
+        a_model.fit_model(x_train, y_train)
+    else:
+        print("Continue model %s, from epoch %d" % (CONTINUE_MODEL, CONTINUE_MODEL_EPOCHS))
+        a_model.continue_model(CONTINUE_MODEL_EPOCHS, CONTINUE_MODEL)
+
     model = a_model.get_model()
     image_model = a_model.image_model
 
-    adv_layer_weights = model.get_layer(index=1).get_weights() # return numpy array containing 299 elements of size 299x3
+    adv_layer_weights = model.get_layer(
+        index=1).get_weights()  # return numpy array containing 299 elements of size 299x3
 
     results = testResults(image_model, IMAGE_SIZE, CENTER_SIZE, adv_layer_weights[0], list(zip(x_valid, y_valid)))
     ProbabilityList = []
@@ -272,21 +274,20 @@ if __name__ == "__main__":
         for j in results[i]:
             allClasses.append(j[0][1])
         for j in set(allClasses):
-            classCount.append((j, allClasses.count(j)/len(allClasses)))
+            classCount.append((j, allClasses.count(j) / len(allClasses)))
             classCount.sort(key=lambda x: x[1], reverse=True)
         ProbabilityList.append((i, classCount))
     ProbabilityList.sort(key=lambda x: x[0])
-    for i,j in ProbabilityList:
+    for i, j in ProbabilityList:
         print(i)
         print(j)
     # Save weights .json
     adv_layer = {"weights": adv_layer_weights[0].tolist()}
 
-
-    if not os.path.exists("results/adv/"):
-            os.makedirs("results/adv/")
+    if not os.path.exists(SAVE_PATH):
+        os.makedirs(SAVE_PATH)
 
     now = datetime.now()
     now_string = now.strftime("%d-%m-%Y_%H-%M-%S")
-    with open("results/adv/adv_layer-%s.json" % now_string, 'w') as outfile:
+    with open("%sadv_layer-%s.json" % (SAVE_PATH, now_string), 'w') as outfile:
         json.dump(adv_layer, outfile)
