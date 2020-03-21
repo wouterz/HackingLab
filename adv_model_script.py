@@ -1,10 +1,9 @@
 import numpy as np
-import json
 import math
 import os
 import glob
-from datetime import datetime
 import sys
+
 
 import tensorflow as tf
 from tensorflow.keras.layers import Layer, Input
@@ -28,9 +27,10 @@ class AdvLayer(Layer):
         # Create a trainable weight variable for this layer.
         img_shape = (self.image_size, self.image_size, 3)
         self.adv_weights = self.add_weight(name='kernel',
-                                           shape=img_shape,
-                                           initializer='uniform',
-                                           trainable=True)
+                                      shape=img_shape,
+                                      initializer='random_normal',
+                                           #regularizer = keras.regularizers.l2(l=0.01),
+                                      trainable=True)
         super(AdvLayer, self).build(input_shape)  # Be sure to call this at the end
 
     def call(self, x):
@@ -57,7 +57,6 @@ class AdvLayer(Layer):
 def testResults(inception, IMAGE_SIZE, CENTER_SIZE, adv_layer, image_set):
     start = int(math.floor(IMAGE_SIZE - CENTER_SIZE) / 2)
     end = int(math.ceil(IMAGE_SIZE - CENTER_SIZE) / 2 + CENTER_SIZE)
-    predictions = []
     predictionDict = {}
     for (i, j) in image_set:
         key = np.argwhere(j == 1)[0][0]
@@ -162,25 +161,25 @@ class AdvModel:
         self.model = model
         lr_metric = self.get_lr_metric(self.optimizer)
         model.compile(optimizer=self.optimizer,
-                      loss=self._loss_tensor,
+                      loss='categorical_crossentropy',
                       metrics=[self._accuracy, lr_metric])
 
-    def fit_model(self, x_train, y_train, currentEpoch=0):
-        cbks = [
-            tf.keras.callbacks.LearningRateScheduler(schedule=lambda epoch: self.step_decay(epoch=epoch), verbose=1),
-            tf.keras.callbacks.ModelCheckpoint(filepath=self.save_path+"weights.{epoch:02d}-{loss:.2f}.hdf5", verbose=0,
-                                               save_best_only=True, save_weights_only=False, mode='auto', period=50,
-                                               monitor="loss")]
+
+    def fit_model(self, x_train, y_train, x_valid, y_valid, currentEpoch=0):
+        cbks = [tf.keras.callbacks.LearningRateScheduler(schedule=lambda epoch: self.step_decay(epoch=epoch), verbose=1),
+                tf.keras.callbacks.ModelCheckpoint(filepath = self.save_path+"weights.{epoch:02d}-{loss:.2f}.hdf5", verbose=0,
+                                                save_best_only=True, save_weights_only=False, mode='auto', period=50, monitor="loss")]
+
         history = self.model.fit(x=x_train, y=y_train,
                                  epochs=self.epochs - currentEpoch,
                                  batch_size=self.batch_size, callbacks=cbks)
         return history
 
-    def continue_model(self, currentEpoch, weights):
+    def continue_model(self, currentEpoch, weights, x_train, y_train, x_valid, y_valid):
         self.model.load_weights(weights)
-        self.previousEpoch = currentEpoch
-        self.fit_model(x_train, y_train, currentEpoch)
-
+        self.previousEpoch=currentEpoch
+        self.fit_model(x_train, y_train, x_valid, y_valid, currentEpoch)
+        
     # https://stackoverflow.com/questions/52277003/how-to-implement-exponentially-decay-learning-rate-in-keras-by-following-the-glo
     def step_decay(self, epoch):
         lr = self.adam_learn_rate
@@ -192,14 +191,15 @@ class AdvModel:
         return self.model
 
     def _loss_tensor(self, y_true, y_pred):
-        cross_entropy_loss = tf.reduce_mean(
-            tf.nn.softmax_cross_entropy_with_logits(labels=y_true, logits=y_pred))
+        #cross_entropy_loss = tf.reduce_mean(
+        #    tf.nn.softmax_cross_entropy_with_logits(labels=y_true, logits=y_pred))
+        cross_entropy_loss = tf.reduce_mean(K.categorical_crossentropy(K.softmax(y_true), y_pred))
         reg_loss = 2e-6 * tf.nn.l2_loss(self.model.get_layer('adv_layer_1').adv_weights)
         loss = cross_entropy_loss + reg_loss
         return loss
 
     def _accuracy(self, y_true, y_pred):
-        correct_predictions = tf.equal(tf.argmax(y_pred, 1), tf.argmax(y_true, 1))
+        correct_predictions = tf.equal(tf.argmax(y_true, 1), tf.argmax(y_pred, 1))
         accuracy = tf.reduce_mean(tf.cast(correct_predictions, tf.float32))
         return accuracy
 
@@ -214,11 +214,12 @@ if __name__ == "__main__":
     ### SETUP PARAMETERS ###
     CENTER_SIZE = 35
     IMAGE_SIZE = 299
-    LABELS = ['1', '2', '3', '4', '5', '6', '7', '8', '9']
-    MAX_IMAGES_PER_CLASS = 1111
+    LABELS = ['1', '9']
+    MAX_IMAGES_PER_CLASS = 100
 
     ADAM_LEARN_RATE = 0.05
     ADAM_DECAY = 0.96
+
     DECAY_STEP = 2
     TEST_SIZE = 0.10
     EPOCHS = 10000
@@ -229,6 +230,7 @@ if __name__ == "__main__":
     if len(sys.argv) == 4:
         CONTINUE_MODEL = sys.argv[2]
         CONTINUE_MODEL_EPOCHS = int(sys.argv[3])
+
     ### END SETUP PARAMETERS ###
     if not os.path.exists(SAVE_PATH):
         os.makedirs(SAVE_PATH)
@@ -241,6 +243,7 @@ if __name__ == "__main__":
     print("Creating output")
     output_a = np.array(output_list, dtype=np.float32)
     output_a = to_categorical(output_a, num_classes=1000, dtype='float32')
+
     print("Creating train and validation")
     x_train, x_valid, y_train, y_valid = train_test_split(input_a, output_a, test_size=TEST_SIZE, shuffle=True)
     print("Train and validation compiled")
@@ -258,36 +261,63 @@ if __name__ == "__main__":
     else:
         print("Continue model %s, from epoch %d" % (CONTINUE_MODEL, CONTINUE_MODEL_EPOCHS))
         a_model.continue_model(CONTINUE_MODEL_EPOCHS, CONTINUE_MODEL)
-
+    
     model = a_model.get_model()
     image_model = a_model.image_model
 
     adv_layer_weights = model.get_layer(
         index=1).get_weights()  # return numpy array containing 299 elements of size 299x3
 
-    results = testResults(image_model, IMAGE_SIZE, CENTER_SIZE, adv_layer_weights[0], list(zip(x_valid, y_valid)))
-    ProbabilityList = []
-    for i in results.keys():
-        print(str(i) + "\n")
-        allClasses = []
-        classCount = []
-        for j in results[i]:
-            allClasses.append(j[0][1])
-        for j in set(allClasses):
-            classCount.append((j, allClasses.count(j) / len(allClasses)))
-            classCount.sort(key=lambda x: x[1], reverse=True)
-        ProbabilityList.append((i, classCount))
-    ProbabilityList.sort(key=lambda x: x[0])
-    for i, j in ProbabilityList:
-        print(i)
-        print(j)
-    # Save weights .json
-    adv_layer = {"weights": adv_layer_weights[0].tolist()}
+##    results = testResults(image_model, IMAGE_SIZE, CENTER_SIZE, adv_layer_weights[0], list(zip(input_a, output_a)))
+##    ProbabilityList = []
+##    for i in results.keys():
+##        print(str(i) + "\n")
+##        allClasses = []
+##        classCount = []
+##        for j in results[i]:
+##            allClasses.append(j[0][1])
+##        for j in set(allClasses):
+##            classCount.append((j, allClasses.count(j)/len(allClasses)))
+##            classCount.sort(key=lambda x: x[1], reverse=True)
+##        ProbabilityList.append((i, classCount))
+##    ProbabilityList.sort(key=lambda x: x[0])
+##    for i,j in ProbabilityList:
+##        print(i)
+##        print(j)
+##    # Save weights .json
+##    adv_layer = {"weights": adv_layer_weights[0].tolist()}
 
-    if not os.path.exists(SAVE_PATH):
-        os.makedirs(SAVE_PATH)
 
-    now = datetime.now()
-    now_string = now.strftime("%d-%m-%Y_%H-%M-%S")
-    with open("%sadv_layer-%s.json" % (SAVE_PATH, now_string), 'w') as outfile:
-        json.dump(adv_layer, outfile)
+##    if not os.path.exists("results/adv/"):
+##            os.makedirs("results/adv/")
+##    
+##    now = datetime.now()
+##    now_string = now.strftime("%d-%m-%Y_%H-%M-%S")
+##    with open("results/adv/adv_layer-%s.json" % now_string, 'w') as outfile:
+##        json.dump(adv_layer, outfile)
+
+    
+    fun = K.function([model.layers[0].input,K.learning_phase()], [model.output])
+    DictionaryList = []
+    for i in range(0,len(LABELS)):
+            DictionaryList.append(dict.fromkeys(np.arange(1000), 0))
+    for i in range(0,1):
+        for i in range(0,len(LABELS)):
+            DictionaryList[i]=dict.fromkeys(np.arange(1000), 0)
+        
+        a_model.fit_model(x_train, y_train, x_valid, y_valid)
+        newOutput = []
+        for i in range(0,len(LABELS)):
+            print("Set "+str(i))
+            for j in range(i*MAX_IMAGES_PER_CLASS, (i+1)*MAX_IMAGES_PER_CLASS):
+                output = np.array(fun([input_a[j].reshape(1,35,35,3), 0]))
+                newOutput.append(output)
+                DictionaryList[i][np.argmax(output)]+=1
+
+        #a_model.fit_model(x_train, y_train, x_valid, y_valid)
+        newOutput = np.array(newOutput).reshape(200,1000)
+        for i in range(0,200):
+            print(str(np.argmax(output_a[i]))+" <> " +str(np.argsort(newOutput[i])[-2:]))
+        for i in DictionaryList:
+            print(dict(filter(lambda elem: elem[1]!=0, i.items())))
+        a_model.previousEpoch+=EPOCHS

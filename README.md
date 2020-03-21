@@ -6,6 +6,12 @@
 python 3.6
 ```
 
+create data:
+
+```
+python3 ./make_squares.py
+```
+
 ### Installing
 
 Create virtual env and activate
