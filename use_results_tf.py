@@ -5,8 +5,9 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras import backend as K
 from tensorflow.keras.utils import to_categorical
+from tensorflow.keras.models import load_model
 
-import adv_model_script as ams
+import adv_model_script_tf as ams
 
 CENTER_SIZE = 35
 IMAGE_SIZE = 299
@@ -55,6 +56,3 @@ newOutput = np.array(newOutput).reshape(len(LABELS) * TEXT_IMAGES_PER_CLASS, 100
 #     print(str(np.argmax(output_list[i])) + " <> " + str(np.argsort(newOutput[i])[-2:]))
 for i in DictionaryList:
     print(dict(filter(lambda elem: elem[1] != 0, i.items())))
-
-if __name__ == '__main__':
-    pass

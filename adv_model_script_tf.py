@@ -148,9 +148,10 @@ class AdvModel():
                       outputs=[outputs])
         self.model = model
         lr_metric = self.get_lr_metric(self.optimizer)
+
         model.compile(optimizer=self.optimizer,
                       loss='categorical_crossentropy',
-                      metrics=[self._accuracy, lr_metric])
+                      metrics=[self.accuracy, lr_metric])
 
     def fit_model(self, x_train, y_train, x_valid, y_valid, save_path="", currentEpoch=0):
         savepath = "%sweights.{epoch:02d}-{loss:.2f}.hdf5" % save_path
@@ -187,7 +188,7 @@ class AdvModel():
         loss = cross_entropy_loss + reg_loss
         return loss
 
-    def _accuracy(self, y_true, y_pred):
+    def accuracy(self, y_true, y_pred):
         correct_predictions = tf.equal(tf.argmax(y_true, 1), tf.argmax(y_pred, 1))
         accuracy = tf.reduce_mean(tf.cast(correct_predictions, tf.float32))
         return accuracy
