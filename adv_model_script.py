@@ -22,6 +22,14 @@ class AdvLayer(Layer):
         self.center_size = center_size
         super(AdvLayer, self).__init__(**kwargs)
 
+    def get_config(self):
+        config = super().get_config().copy()
+        config.update({
+            'image_size': self.image_size,
+            'center_size': self.center_size,
+        })
+        return config
+
     def build(self, input_shape):
         # Create a trainable weight variable for this layer.
         img_shape = (self.image_size, self.image_size, 3)
@@ -42,7 +50,6 @@ class AdvLayer(Layer):
         mask = tf.constant(input_mask, dtype=tf.float32)
         padx = tf.pad(x,
                       paddings=tf.constant([[0, 0], [start, start2], [start, start2], [0, 0]]))
-        print(padx)
         adv_img = tf.nn.tanh(tf.multiply(self.adv_weights, mask)) + padx
         # adv_img[start:end, start:end, :] = x
         self.out_shape = adv_img.shape
@@ -163,12 +170,13 @@ class AdvModel:
                       loss='categorical_crossentropy',
                       metrics=[self._accuracy, lr_metric])
 
-    def fit_model(self, x_train, y_train, x_valid, y_valid, currentEpoch=0):
+    def fit_model(self, x_train, y_train, x_valid, y_valid, save_path, currentEpoch=0):
+        savepath = "%sweights.{epoch:02d}-{loss:.2f}.hdf5" % save_path
         cbks = [
             tf.keras.callbacks.LearningRateScheduler(schedule=lambda epoch: self.step_decay(epoch=epoch), verbose=1),
-            tf.keras.callbacks.ModelCheckpoint(filepath=self.save_path + "weights.{epoch:02d}-{loss:.2f}.hdf5",
+            tf.keras.callbacks.ModelCheckpoint(filepath=savepath,
                                                verbose=0,
-                                               save_best_only=True, save_weights_only=False, mode='auto', period=50,
+                                               save_best_only=True, save_weights_only=False, mode='auto', period=25,
                                                monitor="loss")]
 
         history = self.model.fit(x=x_train, y=y_train,
@@ -176,10 +184,10 @@ class AdvModel:
                                  batch_size=self.batch_size, callbacks=cbks)
         return history
 
-    def continue_model(self, currentEpoch, weights, x_train, y_train, x_valid, y_valid):
+    def continue_model(self, currentEpoch, weights, x_train, y_train, x_valid, y_valid, save_path):
         self.model.load_weights(weights)
         self.previousEpoch = currentEpoch
-        self.fit_model(x_train, y_train, x_valid, y_valid, currentEpoch)
+        self.fit_model(x_train, y_train, x_valid, y_valid, save_path, currentEpoch)
 
     # https://stackoverflow.com/questions/52277003/how-to-implement-exponentially-decay-learning-rate-in-keras-by-following-the-glo
     def step_decay(self, epoch):
@@ -259,10 +267,10 @@ if __name__ == "__main__":
 
     if len(sys.argv) != 3:
         print("Fit new model")
-        a_model.fit_model(x_train, y_train, x_valid, y_valid)
+        a_model.fit_model(x_train, y_train, x_valid, y_valid, SAVE_PATH)
     else:
         print("Continue model %s, from epoch %d" % (CONTINUE_MODEL, CONTINUE_MODEL_EPOCHS))
-        a_model.continue_model(CONTINUE_MODEL_EPOCHS, CONTINUE_MODEL, x_train, y_train, x_valid, y_valid)
+        a_model.continue_model(CONTINUE_MODEL_EPOCHS, CONTINUE_MODEL, x_train, y_train, x_valid, y_valid, SAVE_PATH)
 
     model = a_model.get_model()
     image_model = a_model.image_model
