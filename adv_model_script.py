@@ -8,8 +8,7 @@ import numpy as np
 import tensorflow as tf
 from keras import backend as K
 from keras.applications import inception_v3
-from keras.engine.topology import Layer
-from keras.layers import Input
+from keras.layers import Input, Layer
 from keras.models import Model
 from keras.optimizers import Adam
 from keras.preprocessing import image

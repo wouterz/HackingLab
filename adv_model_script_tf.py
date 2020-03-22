@@ -28,6 +28,7 @@ class AdvLayer(Layer):
             'image_size': self.image_size,
             'center_size': self.center_size,
         })
+        return config
 
     def build(self, input_shape):
         # Create a trainable weight variable for this layer.
