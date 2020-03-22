@@ -27,12 +27,12 @@ python -m pip install -r requirements.txt
 
 ### Running
 
-Include path to folder to save models to (end with /)
+Include path to folder to save models to **(end with /)**
 ```
-python adv_model_script.py /path/save/models/
+python adv_model_script_tf.py /path/save/models/
 ```
 
 or to run with slurm
 ```
-sbatch jobscript_opt.sbatch /path/save/models/
+sbatch jobscript_opt_tf.sbatch /path/save/models/
 ```
