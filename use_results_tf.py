@@ -3,22 +3,22 @@ import sys
 
 import numpy as np
 import tensorflow as tf
-from keras import backend as K
-from keras.utils import to_categorical
+from tensorflow.keras import backend as K
+from tensorflow.keras.utils import to_categorical
 
 import adv_model_script as ams
 
 CENTER_SIZE = 35
 IMAGE_SIZE = 299
 LABELS = ['1', '2', '3', '4', '5', '6', '7', '8', '9']
-TEST_IMAGES_PER_CLASS = 10
+TEXT_IMAGES_PER_CLASS = 10
 
 filename = sys.argv[1]
 if not os.path.isfile(filename):
     print('file %s not found' % filename)
     exit(1)
 
-dp = ams.DataPreprocessing("squares", CENTER_SIZE, LABELS, TEST_IMAGES_PER_CLASS)
+dp = ams.DataPreprocessing("squares", CENTER_SIZE, LABELS, TEXT_IMAGES_PER_CLASS)
 input_list, output_list = dp.createData()
 output_list = to_categorical(output_list, num_classes=1000, dtype='float32')
 
@@ -29,7 +29,8 @@ model = a_model.get_model()
 model.load_weights(filename)
 print(model.summary())
 
-fun = K.function([model.layers[0].input,], [model.output])
+K.set_learning_phase(0)
+fun = K.function([model.layers[0].input], [model.output])
 DictionaryList = []
 for i in range(0, len(LABELS)):
     DictionaryList.append(dict.fromkeys(np.arange(1000), 0))
@@ -39,7 +40,7 @@ for i in range(0, len(LABELS)):
 newOutput = []
 for i in range(0, len(LABELS)):
     print("Set " + str(i))
-    for j in range(i * TEST_IMAGES_PER_CLASS, (i + 1) * TEST_IMAGES_PER_CLASS):
+    for j in range(i * TEXT_IMAGES_PER_CLASS, (i + 1) * TEXT_IMAGES_PER_CLASS):
         output = np.array(
             fun([np.array(tf.convert_to_tensor(
                 input_list[j]
@@ -49,7 +50,7 @@ for i in range(0, len(LABELS)):
         newOutput.append(output)
         DictionaryList[i][np.argmax(output)] += 1
 
-newOutput = np.array(newOutput).reshape(len(LABELS) * TEST_IMAGES_PER_CLASS, 1000)
+newOutput = np.array(newOutput).reshape(len(LABELS) * TEXT_IMAGES_PER_CLASS, 1000)
 # for i in range(0, len(LABELS) * MAX_IMAGES_PER_CLASS):
 #     print(str(np.argmax(output_list[i])) + " <> " + str(np.argsort(newOutput[i])[-2:]))
 for i in DictionaryList:

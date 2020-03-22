@@ -3,17 +3,15 @@ import math
 import sys
 import os
 
-import keras
 import numpy as np
 import tensorflow as tf
-from keras import backend as K
-from keras.applications import inception_v3
-from keras.engine.topology import Layer
-from keras.layers import Input
-from keras.models import Model
-from keras.optimizers import Adam
-from keras.preprocessing import image
-from keras.utils import to_categorical
+from tensorflow.keras import backend as K
+from tensorflow.keras.applications import inception_v3
+from tensorflow.keras.layers import Input, Layer
+from tensorflow.keras.models import Model
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.preprocessing import image
+from tensorflow.keras.utils import to_categorical
 from sklearn.model_selection import train_test_split
 
 
@@ -24,13 +22,19 @@ class AdvLayer(Layer):
         self.center_size = center_size
         super(AdvLayer, self).__init__(**kwargs)
 
+    def get_config(self):
+        config = super().get_config().copy()
+        config.update({
+            'image_size': self.image_size,
+            'center_size': self.center_size,
+        })
+
     def build(self, input_shape):
         # Create a trainable weight variable for this layer.
         img_shape = (self.image_size, self.image_size, 3)
         self.adv_weights = self.add_weight(name='kernel',
                                            shape=img_shape,
                                            initializer='random_normal',
-                                           # regularizer = keras.regularizers.l2(l=0.01),
                                            trainable=True)
         super(AdvLayer, self).build(input_shape)  # Be sure to call this at the end
 
@@ -150,8 +154,8 @@ class AdvModel():
     def fit_model(self, x_train, y_train, x_valid, y_valid, save_path="", currentEpoch=0):
         savepath = "%sweights.{epoch:02d}-{loss:.2f}.hdf5" % save_path
 
-        cbks = [keras.callbacks.LearningRateScheduler(schedule=lambda epoch: self.step_decay(epoch=epoch), verbose=1),
-                keras.callbacks.ModelCheckpoint(filepath=savepath, verbose=0,
+        cbks = [tf.keras.callbacks.LearningRateScheduler(schedule=lambda epoch: self.step_decay(epoch=epoch), verbose=1),
+                tf.keras.callbacks.ModelCheckpoint(filepath=savepath, verbose=0,
                                                 save_best_only=True, save_weights_only=False, mode='auto', period=25,
                                                 monitor="loss")]
         history = self.model.fit(x=x_train, y=y_train,
