@@ -32,7 +32,7 @@ Include path to folder to save models to (end with /)
 python adv_model_script.py /path/save/models/
 ```
 
-or (edit path variable in the file)
+or to run with slurm
 ```
-sbatch jobscript_opt.sbatch
+sbatch jobscript_opt.sbatch /path/save/models/
 ```
