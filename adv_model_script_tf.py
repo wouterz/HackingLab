@@ -17,9 +17,10 @@ from sklearn.model_selection import train_test_split
 
 class AdvLayer(Layer):
 
-    def __init__(self, image_size=0, center_size=0, **kwargs):
+    def __init__(self, image_size=299, center_size=35, channels=3, **kwargs):
         self.image_size = image_size
         self.center_size = center_size
+        self.channels = channels
         super(AdvLayer, self).__init__(**kwargs)
 
     def get_config(self):
@@ -27,12 +28,13 @@ class AdvLayer(Layer):
         config.update({
             'image_size': self.image_size,
             'center_size': self.center_size,
+            'channels': self.channels,
         })
         return config
 
     def build(self, input_shape):
         # Create a trainable weight variable for this layer.
-        img_shape = (self.image_size, self.image_size, 3)
+        img_shape = (self.image_size, self.image_size, self.channels)
         self.adv_weights = self.add_weight(name='kernel',
                                            shape=img_shape,
                                            initializer='random_normal',
@@ -44,12 +46,12 @@ class AdvLayer(Layer):
         start2 = math.ceil((self.image_size - self.center_size) / 2)
         if not self.center_size % 2:
             start2 = int(math.floor((self.image_size - self.center_size) / 2))
-        input_mask = np.pad(np.zeros([1, self.center_size, self.center_size, 3]),
+        input_mask = np.pad(np.zeros([1, self.center_size, self.center_size, self.channels]),
                             [[0, 0], [start, start2], [start, start2], [0, 0]], 'constant', constant_values=1)
         mask = tf.constant(input_mask, dtype=tf.float32)
         padx = tf.pad(x,
                       paddings=tf.constant([[0, 0], [start, start2], [start, start2], [0, 0]]))
-        print(padx)
+
         adv_img = tf.nn.tanh(tf.multiply(self.adv_weights, mask)) + padx
         # adv_img[start:end, start:end, :] = x
         self.out_shape = adv_img.shape
@@ -59,13 +61,8 @@ class AdvLayer(Layer):
     def compute_output_shape(self, input_shape):
         return self.out_shape
 
-def label_mapping():
-    imagenet_label = np.zeros([1000, len(LABELS)])
-    imagenet_label[0:len(LABELS), 0:len(LABELS)] = np.eye(len(LABELS))
-    return tf.constant(imagenet_label, dtype=tf.float32)
 
-
-class DataPreprocessing():
+class DataPreprocessing:
 
     def __init__(self, imgID, size, labels, numberOfImages):
         self.imgID = imgID
@@ -82,12 +79,23 @@ class DataPreprocessing():
 
     def loadImages(self):
         images = self.images
-        for label in self.labels:
-            if (self.imgID == "squares"):
+
+        if self.imgID == 'squares':
+            for label in self.labels:
                 files = glob.glob("images/square_%dp/squares_%dp_%s_*.png" % (self.size, self.size, label))
                 images[label] = [image.load_img(f, target_size=(self.size, self.size)) for f in
                                  files[:self.numberOfImages]]
-        self.expandImages()
+            self.expandImages()
+
+        if self.imgID == 'mnist':
+            (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
+
+            for i in set(y_train):
+                images[i] = list()
+
+            for i in range(self.numberOfImages * len(self.labels)):
+                dumb_3_channel = np.repeat(x_train[i][:,:,np.newaxis], 3, axis=2)
+                images[y_train[i]].append(dumb_3_channel)
 
     def expandImages(self):
         images = self.images
@@ -111,10 +119,10 @@ class DataPreprocessing():
         return self.input_list, self.output_list
 
 
-class AdvModel():
+class AdvModel:
 
-    def __init__(self, epochs, batch_size, center_size, image_size, adam_learn_rate, adam_decay, step, model_name,
-                 labels):
+    def __init__(self, epochs, batch_size, center_size, image_size, channels,
+                 adam_learn_rate, adam_decay, step, model_name, labels):
         self.labels = labels
         self.previousEpoch = 0
         self.step = step
@@ -122,6 +130,7 @@ class AdvModel():
         self.batch_size = batch_size
         self.center_size = center_size
         self.image_size = image_size
+        self.channels = channels
         self.adam_learn_rate = adam_learn_rate
         self.adam_decay = adam_decay
         self.optimizer = Adam(lr=adam_learn_rate)
@@ -131,15 +140,16 @@ class AdvModel():
     def make_image_model(self, model_name):
         inception = []
         if (model_name == "inception_v3"):
-            inception = inception_v3.InceptionV3(weights='imagenet',
-                                                 input_tensor=Input(shape=(self.image_size, self.image_size, 3)))
+            inception = inception_v3.InceptionV3(weights='imagenet', input_tensor=Input(
+                shape=(self.image_size, self.image_size, self.channels)
+            ))
             inception.trainable = False
         return inception
 
     def build_model(self):
         # Adv Layer
-        inputs = Input(shape=(self.center_size, self.center_size, 3))
-        al = AdvLayer(image_size=self.image_size, center_size=self.center_size)(inputs)
+        inputs = Input(shape=(self.center_size, self.center_size, self.channels))
+        al = AdvLayer(image_size=self.image_size, center_size=self.center_size, channels=self.channels)(inputs)
         # al.set_image_size(self.image_size)
         # Combine layers
         outputs = self.image_model(al)
@@ -156,10 +166,11 @@ class AdvModel():
     def fit_model(self, x_train, y_train, x_valid, y_valid, save_path="", currentEpoch=0):
         savepath = "%sweights.{epoch:02d}-{loss:.2f}.hdf5" % save_path
 
-        cbks = [tf.keras.callbacks.LearningRateScheduler(schedule=lambda epoch: self.step_decay(epoch=epoch), verbose=1),
-                tf.keras.callbacks.ModelCheckpoint(filepath=savepath, verbose=0,
-                                                save_best_only=True, save_weights_only=False, mode='auto', period=25,
-                                                monitor="loss")]
+        cbks = [
+            tf.keras.callbacks.LearningRateScheduler(schedule=lambda epoch: self.step_decay(epoch=epoch), verbose=1),
+            tf.keras.callbacks.ModelCheckpoint(filepath=savepath, verbose=0,
+                                               save_best_only=True, save_weights_only=False, mode='auto', period=25,
+                                               monitor="loss")]
         history = self.model.fit(x=x_train, y=y_train,
                                  epochs=self.epochs - currentEpoch,
                                  batch_size=self.batch_size, callbacks=cbks)
@@ -202,10 +213,15 @@ class AdvModel():
 
 if __name__ == "__main__":
     ### SETUP PARAMETERS ###
-    CENTER_SIZE = 35
+    CHANNELS = 3
+    CENTER_SIZE = 28
+    IMAGES = 'mnist'
+    # imgID squares or mnist
+
     IMAGE_SIZE = 299
-    LABELS = ['1', '2', '3', '4', '5', '6', '7', '8', '9']
-    MAX_IMAGES_PER_CLASS = 2222
+    LABELS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+
+    MAX_IMAGES_PER_CLASS = 22
 
     ADAM_LEARN_RATE = 0.05
     ADAM_DECAY = 0.96
@@ -226,7 +242,7 @@ if __name__ == "__main__":
     ### END SETUP PARAMETERS ###
 
     # Load / prepare data
-    data = DataPreprocessing(imgID="squares", size=CENTER_SIZE, labels=LABELS, numberOfImages=MAX_IMAGES_PER_CLASS)
+    data = DataPreprocessing(imgID=IMAGES, size=CENTER_SIZE, labels=LABELS, numberOfImages=MAX_IMAGES_PER_CLASS)
     input_list, output_list = data.createData()
 
     input_a = np.array(tf.convert_to_tensor(input_list))
@@ -238,12 +254,13 @@ if __name__ == "__main__":
     x_train, x_valid, y_train, y_valid = train_test_split(input_a, output_a, test_size=TEST_SIZE, shuffle=True)
     print("Train and validation compiled")
 
-
     # Write results
     print("Compiling model")
     a_model = AdvModel(epochs=EPOCHS, model_name="inception_v3", batch_size=BATCH_SIZE, center_size=CENTER_SIZE,
-                       image_size=IMAGE_SIZE,
+                       image_size=IMAGE_SIZE, channels=CHANNELS,
                        adam_learn_rate=ADAM_LEARN_RATE, adam_decay=ADAM_DECAY, step=DECAY_STEP, labels=LABELS)
+
+    print(a_model.get_model().summary())
     print("fit model")
 
     if len(sys.argv) != 3:
