@@ -27,12 +27,16 @@ python -m pip install -r requirements.txt
 
 ### Running
 
-Include path to folder to save models to **(end with /)**
+Include path to folder to save models to **(end with /)**  
+CLASS_IMAGES = amount of images per class  
+IMAGE_TYPE = mnist or squares
+
 ```
-python adv_model_script_tf.py /path/save/models/
+python adv_model_script_tf.py /path/save/models/ CLASS_IMAGES IMAGE_TYPE
 ```
 
 or to run with slurm
+
 ```
-sbatch jobscript_opt_tf.sbatch /path/save/models/
+sbatch jobscript_opt_tf.sbatch /path/save/models/ CLASS_IMAGES IMAGE_TYPE
 ```

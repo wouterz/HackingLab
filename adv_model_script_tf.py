@@ -2,6 +2,7 @@ import glob
 import math
 import sys
 import os
+import argparse
 
 import numpy as np
 import tensorflow as tf
@@ -87,13 +88,18 @@ class DataPreprocessing:
                                  files[:self.numberOfImages]]
             self.expandImages()
 
-        if self.imgID == 'mnist':
-            (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
+        if self.imgID in ['mnist', 'cifar10', 'cifar100']:
+            mapper = {
+                'mnist': tf.keras.datasets.mnist.load_data,
+                'cifar10': tf.keras.datasets.cifar10.load_data,
+                'cifar100': tf.keras.datasets.cifar100.load_data,
+            }
+            (x_train, y_train), (x_test, y_test) = mapper[self.imgID]()
 
             for i in set(y_train):
                 images[i] = list()
 
-            for i in range(self.numberOfImages * len(self.labels)):
+            for i in range(x_train.shape[0]):
                 dumb_3_channel = np.repeat(x_train[i][:,:,np.newaxis], 3, axis=2)
                 images[y_train[i]].append(dumb_3_channel)
 
@@ -213,15 +219,29 @@ class AdvModel:
 
 if __name__ == "__main__":
     ### SETUP PARAMETERS ###
+    parser = argparse.ArgumentParser()
+    parser.add_argument('save_path', help='Path where to save files, END WITH /')
+    parser.add_argument('images_per_class', type=int)
+    parser.add_argument('image_type', choices=['mnist', 'squares'], help='mnist or squares')
+
+    parser.add_argument('--continue_path')
+    parser.add_argument('--continue_start_epoch', type=int)
+    parser.add_argument('--batch_size', type=int, default=50)
+
+    args = parser.parse_args()
+
     CHANNELS = 3
-    CENTER_SIZE = 28
-    IMAGES = 'mnist'
-    # imgID squares or mnist
+    CENTER_SIZE = 35
+    LABELS = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+    IMAGES = args.image_type
+
+    if IMAGES == 'mnist':
+        CENTER_SIZE = 28
+        LABELS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 
     IMAGE_SIZE = 299
-    LABELS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 
-    MAX_IMAGES_PER_CLASS = 22
+    MAX_IMAGES_PER_CLASS = args.images_per_class
 
     ADAM_LEARN_RATE = 0.05
     ADAM_DECAY = 0.96
@@ -229,15 +249,16 @@ if __name__ == "__main__":
 
     TEST_SIZE = 0.10
     EPOCHS = 10000
-    BATCH_SIZE = 50
+    BATCH_SIZE = args.batch_size
 
-    SAVE_PATH = sys.argv[1]
+    SAVE_PATH = args.save_path
     if not os.path.exists(SAVE_PATH):
         os.makedirs(SAVE_PATH)
 
-    if len(sys.argv) == 4:
-        CONTINUE_MODEL = sys.argv[2]
-        CONTINUE_MODEL_EPOCHS = int(sys.argv[3])
+    CONTINUE_MODEL = args.continue_path
+    CONTINUE_MODEL_EPOCHS = args.continue_start_epoch
+
+    print("PARAMETERS: imageType {}, imagesPerClass {} SavePath {}".format(IMAGES, MAX_IMAGES_PER_CLASS, SAVE_PATH))
 
     ### END SETUP PARAMETERS ###
 
@@ -263,7 +284,7 @@ if __name__ == "__main__":
     print(a_model.get_model().summary())
     print("fit model")
 
-    if len(sys.argv) != 3:
+    if not CONTINUE_MODEL_EPOCHS and not CONTINUE_MODEL:
         print("Fit new model")
         a_model.fit_model(x_train, y_train, x_valid, y_valid, SAVE_PATH)
     else:
