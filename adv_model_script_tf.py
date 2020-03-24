@@ -163,11 +163,12 @@ class AdvModel:
         model = Model(inputs=[inputs],
                       outputs=[outputs])
         self.model = model
+        print(model.summary())
         lr_metric = self.get_lr_metric(self.optimizer)
 
         model.compile(optimizer=self.optimizer,
-                      loss='categorical_crossentropy',
-                      metrics=[self.accuracy, lr_metric])
+                      loss=self._loss_tensor,
+                      metrics=['accuracy'])
 
     def fit_model(self, x_train, y_train, x_valid, y_valid, save_path="", currentEpoch=0):
         savepath = "%sweights.{epoch:02d}-{loss:.2f}.hdf5" % save_path
@@ -175,11 +176,10 @@ class AdvModel:
         cbks = [
             tf.keras.callbacks.LearningRateScheduler(schedule=lambda epoch: self.step_decay(epoch=epoch), verbose=1),
             tf.keras.callbacks.ModelCheckpoint(filepath=savepath, verbose=0,
-                                               save_best_only=True, save_weights_only=False, mode='auto', period=25,
-                                               monitor="loss")]
-        history = self.model.fit(x=x_train, y=y_train,
+                                               save_best_only=True, save_weights_only=False, mode='auto', period=5)]
+        history = self.model.fit(x=x_train, y=y_train, validation_data=(x_valid, y_valid),
                                  epochs=self.epochs - currentEpoch,
-                                 batch_size=self.batch_size, callbacks=cbks)
+                                 batch_size=self.batch_size, callbacks=cbks, shuffle=True)
         return history
 
     def continue_model(self, currentEpoch, weights, x_train, y_train, x_valid, y_valid, save_path=""):
@@ -198,17 +198,15 @@ class AdvModel:
         return self.model
 
     def _loss_tensor(self, y_true, y_pred):
-        # cross_entropy_loss = tf.reduce_mean(
-        #    tf.nn.softmax_cross_entropy_with_logits(labels=y_true, logits=y_pred))
-        cross_entropy_loss = tf.reduce_mean(K.categorical_crossentropy(K.softmax(y_true), y_pred))
-        reg_loss = 2e-6 * tf.nn.l2_loss(self.model.get_layer('adv_layer_1').adv_weights)
+        cross_entropy_loss = tf.nn.softmax_cross_entropy_with_logits(labels=y_true, logits=y_pred)
+        reg_loss = 2e-6 * tf.nn.l2_loss(self.model.get_layer('adv_layer').adv_weights)
         loss = cross_entropy_loss + reg_loss
         return loss
 
-    def accuracy(self, y_true, y_pred):
-        correct_predictions = tf.equal(tf.argmax(y_true, 1), tf.argmax(y_pred, 1))
-        accuracy = tf.reduce_mean(tf.cast(correct_predictions, tf.float32))
-        return accuracy
+    # def accuracy(self, y_true, y_pred):
+    #     correct_predictions = tf.equal(tf.argmax(y_true, 1), tf.argmax(y_pred, 1))
+    #     accuracy = tf.reduce_mean(tf.cast(correct_predictions, tf.float32))
+    #     return accuracy
 
     def get_lr_metric(self, optimizer):
         def lr(y_true, y_pred):
