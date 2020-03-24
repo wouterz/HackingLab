@@ -168,7 +168,7 @@ class AdvModel:
 
         model.compile(optimizer=self.optimizer,
                       loss=self._loss_tensor,
-                      metrics=['accuracy'])
+                      metrics=['accuracy', lr_metric])
 
     def fit_model(self, x_train, y_train, x_valid, y_valid, save_path="", currentEpoch=0):
         savepath = "%sweights.{epoch:02d}-{loss:.2f}.hdf5" % save_path
@@ -187,7 +187,6 @@ class AdvModel:
         self.previousEpoch = currentEpoch
         self.fit_model(x_train, y_train, x_valid, y_valid, save_path, currentEpoch)
 
-    # https://stackoverflow.com/questions/52277003/how-to-implement-exponentially-decay-learning-rate-in-keras-by-following-the-glo
     def step_decay(self, epoch):
         lr = self.adam_learn_rate
         drop = self.adam_decay
