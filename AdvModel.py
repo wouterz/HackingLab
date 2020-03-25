@@ -80,7 +80,7 @@ class AdvModel:
         if (model_name == "inception_v3"):
             inception = inception_v3.InceptionV3(weights='imagenet', input_tensor=Input(
                 shape=(self.image_size, self.image_size, 3)
-            ))
+            ), layers=tf.keras.layers)
             inception.trainable = False
         return inception
 
