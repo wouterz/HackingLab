@@ -35,7 +35,7 @@ if IMAGES == 'mnist':
     LABELS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 
 
-x_test, y_test = get_data(IMAGES, TEST_IMAGES_PER_CLASS, train=False)
+x_test, y_test, weights = get_data(IMAGES, TEST_IMAGES_PER_CLASS, train=False, expand=False)
 y_test = to_categorical(y_test, num_classes=1000, dtype='float32')
 
 a_model = ams.AdvModel(epochs=100, model_name="inception_v3", batch_size=50, center_size=CENTER_SIZE,
@@ -45,28 +45,5 @@ a_model = ams.AdvModel(epochs=100, model_name="inception_v3", batch_size=50, cen
 model = a_model.get_model()
 model.load_weights(filename)
 
-fun = K.function([model.layers[0].input], [model.output])
-DictionaryList = []
-for i in range(0, len(LABELS)):
-    DictionaryList.append(dict.fromkeys(np.arange(1000), 0))
-for i in range(0, len(LABELS)):
-    DictionaryList[i] = dict.fromkeys(np.arange(1000), 0)
-
-newOutput = []
-for i in range(0, len(LABELS)):
-    print("Set " + str(i))
-    for j in range(i * TEST_IMAGES_PER_CLASS, (i + 1) * TEST_IMAGES_PER_CLASS):
-        output = np.array(
-            fun([np.array(tf.convert_to_tensor(
-                y_test[j]
-            )
-            ).reshape(1, CENTER_SIZE, CENTER_SIZE, CHANNELS), 1])
-        )
-        newOutput.append(output)
-        DictionaryList[i][np.argmax(output)] += 1
-
-newOutput = np.array(newOutput).reshape(len(LABELS) * TEST_IMAGES_PER_CLASS, 1000)
-# for i in range(0, len(LABELS) * MAX_IMAGES_PER_CLASS):
-#     print(str(np.argmax(output_list[i])) + " <> " + str(np.argsort(newOutput[i])[-2:]))
-for i in DictionaryList:
-    print(dict(filter(lambda elem: elem[1] != 0, i.items())))
+results = model.evaluate(x_test, y_test)
+print(results)
