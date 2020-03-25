@@ -5,8 +5,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras.preprocessing import image
 
-
-def get_data(img_id: str, number_of_images: int, train=True, labels=None):
+def get_data(img_id: str, number_of_images: int, train=True, labels=None, expand=True):
     x = list()
     y = list()
 
@@ -19,7 +18,7 @@ def get_data(img_id: str, number_of_images: int, train=True, labels=None):
         (x_train, y_train), (x_test, y_test) = mapper[img_id]()
 
         if not labels:
-            labels = set(y_train)
+            labels = list(set(y_train))
 
         for label in labels:
             if train:
@@ -52,24 +51,32 @@ def get_data(img_id: str, number_of_images: int, train=True, labels=None):
                              files[:number_of_images]]
 
         # Expand to same number of images per class by copying.
-        for key in images.keys():
-            ls = images[key]
-            if len(ls) < number_of_images:
-                images[key] = ls * math.ceil(number_of_images / len(ls))
+        if(expand):
+            for key in images.keys():
+                ls = images[key]
+                if len(ls) < number_of_images:
+                    images[key] = ls * math.ceil(number_of_images / len(ls))
 
         x = list()
         y = list()
         for k, v in images.items():
-            x.append(v)
-            y.append([k]*len(v))
+            x.extend(v)
+            y.extend([k]*len(v))
 
     x = np.asarray(x)
     y = np.asarray(y)
+    weightTensor = np.arange(len(labels))
+    print(len(labels))
+    for i in range(0,len(labels)):
+        weightTensor[i]=np.count_nonzero(y==labels[i])
+
+    weightTensor=weightTensor.astype('float32')
+    weightTensor/=np.max(weightTensor)
+    weightTensor=1/weightTensor
 
     x = x.astype('float32')
     x /= 255
     # TODO ??
     # x -= 0.5
     # x *= 2
-
-    return x, y
+    return x, y, weightTensor

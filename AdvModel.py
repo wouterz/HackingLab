@@ -1,6 +1,5 @@
 import math
 import numpy as np
-
 import tensorflow as tf
 from tensorflow.keras.applications import inception_v3
 from tensorflow.keras.layers import Input
@@ -99,10 +98,10 @@ class AdvModel:
         lr_metric = self.get_lr_metric(self.optimizer)
 
         model.compile(optimizer=self.optimizer,
-                      loss=self._loss_tensor,
+                      loss=['categorical_crossentropy'],
                       metrics=['accuracy', lr_metric])
 
-    def fit_model(self, x_train, y_train, x_valid, y_valid, save_path="", current_epoch=0):
+    def fit_model(self, x_train, y_train, x_valid, y_valid, weights, save_path="", current_epoch=0):
         savepath = "%sweights.{epoch:02d}-{loss:.2f}.hdf5" % save_path
 
         cbks = [
@@ -112,7 +111,7 @@ class AdvModel:
 
         history = self.model.fit(x=x_train, y=y_train, validation_data=(x_valid, y_valid),
                                  epochs=self.epochs - current_epoch,
-                                 batch_size=self.batch_size, callbacks=cbks, shuffle=True)
+                                 batch_size=self.batch_size, callbacks=cbks, class_weight=weights, shuffle=True)
         return history
 
     def continue_model(self, current_epoch, weights, x_train, y_train, x_valid, y_valid, save_path=""):

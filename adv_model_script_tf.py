@@ -2,7 +2,7 @@ import argparse
 import os
 
 from sklearn.model_selection import train_test_split
-
+import numpy as np
 from AdvModel import AdvModel
 from data_helper import get_data
 from tensorflow.keras.utils import to_categorical
@@ -49,7 +49,7 @@ if __name__ == "__main__":
     ### END SETUP PARAMETERS ###
 
     # Load / prepare data
-    x_train, y_train = get_data(IMAGES, MAX_IMAGES_PER_CLASS, train=True)
+    x_train, y_train, weights = get_data(IMAGES, MAX_IMAGES_PER_CLASS, train=True, expand=False)
     y_train = to_categorical(y_train, 1000,  dtype='float32')
     print(x_train.shape, y_train.shape)
 
@@ -70,7 +70,7 @@ if __name__ == "__main__":
     print("fit model")
     if not CONTINUE_MODEL_EPOCHS and not CONTINUE_MODEL:
         print("Fit new model")
-        a_model.fit_model(x_train, y_train, x_valid, y_valid, SAVE_PATH)
+        a_model.fit_model(x_train, y_train, x_valid, y_valid, weights, SAVE_PATH)
     else:
         print("Continue model %s, from epoch %d" % (CONTINUE_MODEL, CONTINUE_MODEL_EPOCHS))
-        a_model.continue_model(CONTINUE_MODEL_EPOCHS, CONTINUE_MODEL, x_train, y_train, x_valid, y_valid, SAVE_PATH)
+        a_model.continue_model(CONTINUE_MODEL_EPOCHS, CONTINUE_MODEL, x_train, y_train, x_valid, y_valid, weights, SAVE_PATH)
