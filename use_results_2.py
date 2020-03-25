@@ -36,7 +36,7 @@ if IMAGES == 'mnist':
 
 
 x_test, y_test = get_data(IMAGES, TEST_IMAGES_PER_CLASS, train=False)
-y_test = to_categorical(y_test, num_classes=1000, dtype='float32')
+y_test = to_categorical(y_test, num_classes=1000)
 
 a_model = ams.AdvModel(epochs=100, model_name="inception_v3", batch_size=50, center_size=CENTER_SIZE,
                        image_size=IMAGE_SIZE,
@@ -45,28 +45,16 @@ a_model = ams.AdvModel(epochs=100, model_name="inception_v3", batch_size=50, cen
 model = a_model.get_model()
 model.load_weights(filename)
 
-fun = K.function([model.layers[0].input], [model.output])
-DictionaryList = []
-for i in range(0, len(LABELS)):
-    DictionaryList.append(dict.fromkeys(np.arange(1000), 0))
-for i in range(0, len(LABELS)):
-    DictionaryList[i] = dict.fromkeys(np.arange(1000), 0)
+score = []
+for i in range(x_test.shape[0]):
+    x = x_test[i:i + 1]
+    y = y_test[i]
+    pred = np.argmax(model.predict(x)[0])
+    if np.array_equal(y, pred):
+        score.append(1)
+    else:
+        score.append(0)
 
-newOutput = []
-for i in range(0, len(LABELS)):
-    print("Set " + str(i))
-    for j in range(i * TEST_IMAGES_PER_CLASS, (i + 1) * TEST_IMAGES_PER_CLASS):
-        output = np.array(
-            fun([np.array(tf.convert_to_tensor(
-                y_test[j]
-            )
-            ).reshape(1, CENTER_SIZE, CENTER_SIZE, CHANNELS), 1])
-        )
-        newOutput.append(output)
-        DictionaryList[i][np.argmax(output)] += 1
+acc = np.mean(np.array(score))
 
-newOutput = np.array(newOutput).reshape(len(LABELS) * TEST_IMAGES_PER_CLASS, 1000)
-# for i in range(0, len(LABELS) * MAX_IMAGES_PER_CLASS):
-#     print(str(np.argmax(output_list[i])) + " <> " + str(np.argsort(newOutput[i])[-2:]))
-for i in DictionaryList:
-    print(dict(filter(lambda elem: elem[1] != 0, i.items())))
+print('Test Acc. of Model: is %.4f' % acc)
