@@ -62,7 +62,28 @@ def get_data(img_id: str, number_of_images: int, train=True, labels=None, expand
         for k, v in images.items():
             x.extend(v)
             y.extend([k]*len(v))
+    elif img_id == 'captcha':
+        if not labels:
+            labels = [i for i in range(0, 26)]
+        
+        labelNames = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z']
+        images = dict()
+        for label in labels:
+            files = glob.glob("images/captcha_60/Letter_%s_*.png" % labelNames[label])
+            images[label] = [np.array(image.load_img(f, target_size=(35, 35))) for f in
+                             files[:number_of_images]]
+        if(expand):
+            for key in images.keys():
+                ls = images[key]
+                if len(ls) < number_of_images:
+                    images[key] = ls * math.ceil(number_of_images / len(ls))
 
+        x = list()
+        y = list()
+        for k, v in images.items():
+            x.extend(v)
+            y.extend([k]*len(v))
+            
     x = np.asarray(x)
     y = np.asarray(y)
     weightTensor = np.arange(len(labels))
