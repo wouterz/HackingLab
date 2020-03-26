@@ -114,10 +114,10 @@ class AdvModel:
                                  batch_size=self.batch_size, callbacks=cbks, class_weight=weights, shuffle=True)
         return history
 
-    def continue_model(self, current_epoch, weights, x_train, y_train, x_valid, y_valid, save_path=""):
+    def continue_model(self, current_epoch, weights, x_train, y_train, x_valid, y_valid, weigths, save_path=""):
         self.model.load_weights(weights)
         self.previousEpoch = current_epoch
-        self.fit_model(x_train, y_train, x_valid, y_valid, save_path, current_epoch)
+        self.fit_model(x_train, y_train, x_valid, y_valid, weights, save_path, current_epoch)
 
     def step_decay(self, epoch):
         lr = self.adam_learn_rate
