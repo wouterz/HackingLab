@@ -101,7 +101,7 @@ class AdvModel:
                       loss=['categorical_crossentropy'],
                       metrics=['accuracy', lr_metric])
 
-    def fit_model(self, x_train, y_train, x_valid, y_valid, weights, save_path="", current_epoch=0):
+    def fit_model(self, x_train, y_train, x_valid, y_valid, weights, save_path=""):
         savepath = "%sweights.{epoch:02d}-{loss:.2f}.hdf5" % save_path
 
         cbks = [
@@ -110,19 +110,20 @@ class AdvModel:
                                                save_best_only=True, save_weights_only=False, mode='auto', period=5)]
 
         history = self.model.fit(x=x_train, y=y_train, validation_data=(x_valid, y_valid),
-                                 epochs=self.epochs - current_epoch,
+                                 epochs=self.epochs,
+                                 initial_epoch = self.previousEpoch,
                                  batch_size=self.batch_size, callbacks=cbks, class_weight=weights, shuffle=True)
         return history
 
     def continue_model(self, current_epoch, weights, x_train, y_train, x_valid, y_valid, weigths, save_path=""):
         self.model.load_weights(weights)
         self.previousEpoch = current_epoch
-        self.fit_model(x_train, y_train, x_valid, y_valid, weights, save_path, current_epoch)
+        self.fit_model(x_train, y_train, x_valid, y_valid, weights, save_path)
 
     def step_decay(self, epoch):
         lr = self.adam_learn_rate
         drop = self.adam_decay
-        lrate = float(lr * math.pow(drop, (epoch + self.previousEpoch) // self.step))
+        lrate = float(lr * math.pow(drop, epoch // self.step))
         return lrate
 
     def get_model(self):

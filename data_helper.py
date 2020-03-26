@@ -94,7 +94,7 @@ def get_data(img_id: str, number_of_images: int, train=True, labels=None, expand
     weightTensor=weightTensor.astype('float32')
     weightTensor/=np.max(weightTensor)
     weightTensor=1/weightTensor
-
+    weightTensor = dict(zip(labels, weightTensor))
     x = x.astype('float32')
     x /= 255
     # TODO ??

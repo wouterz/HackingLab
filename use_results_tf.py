@@ -6,15 +6,33 @@ import tensorflow as tf
 from tensorflow.keras import backend as K
 from tensorflow.keras.utils import to_categorical
 from data_helper import get_data
-
+import math
 import adv_model_script_tf as ams
+from keras.applications import inception_v3, inception_resnet_v2, resnet
+import tensorflow.keras as keras
+def testResults(inception, adv_layer, x, y):
+    start = int(math.floor(IMAGE_SIZE - CENTER_SIZE) / 2)
+    end = int(math.ceil(IMAGE_SIZE - CENTER_SIZE) / 2 + CENTER_SIZE)
+    predictions = []
+    predictionDict = {}
+    for i in x:
+        i=i.reshape(1,35,35,3)
+    x = inception_v3.decode_predictions(model.predict(x), top=2, utils=keras.utils)
+    for i in range(len(x)):
+        key = np.argwhere(y[i]==1)[0][0]
+        #print(np.argmax(prediction))
+        if key not in predictionDict.keys():
+            predictionDict[key]=[]
+        
+        predictionDict[key].append(x[i])
+    return predictionDict
 
 K.set_learning_phase(0)
 
 parser = argparse.ArgumentParser()
 parser.add_argument('save_path', help='Path where to saved file')
 parser.add_argument('images_per_class', type=int)
-parser.add_argument('image_type', choices=['mnist', 'squares'], help='mnist or squares')
+parser.add_argument('image_type', choices=['mnist', 'squares', 'captcha'], help='mnist or squares')
 
 args = parser.parse_args()
 
@@ -44,6 +62,23 @@ a_model = ams.AdvModel(epochs=100, model_name="inception_v3", batch_size=50, cen
 
 model = a_model.get_model()
 model.load_weights(filename)
-
-results = model.evaluate(x_test, y_test)
-print(results)
+weights = model.get_layer(index=1).get_weights()
+results = testResults(a_model.image_model, weights[0], x_test, y_test)
+#print(results)
+ProbabilityList = []
+for i in results.keys():
+    print(str(i) + "\n")
+    allClasses = []
+    classCount = []
+    for j in results[i]:
+        allClasses.append(j[0][1])
+    for j in set(allClasses):
+        classCount.append((j, allClasses.count(j)/len(allClasses)))
+        classCount.sort(key=lambda x: x[1], reverse=True)
+    ProbabilityList.append((i, classCount))
+ProbabilityList.sort(key=lambda x: x[0])
+for i,j in ProbabilityList:
+    print(i)
+    print(j)
+    
+#print(results)
