@@ -71,23 +71,24 @@ class AdvModel:
         self.channels = channels
         self.adam_learn_rate = adam_learn_rate
         self.adam_decay = adam_decay
-
+        self.hrs_defense = hrs_defense
         self.optimizer = Adam(lr=adam_learn_rate)
 
         self.image_model = self.make_image_model(model_name)
         self.build_model()
 
-    def make_image_model(self, model_name):
+    def make_image_model(self, model_name, model_indicator):
         inception = []
-        if (model_name == "inception_v3"):
-            if(hrs_defense):
-                blocks_definition = get_split(split, 'IMAGENET')
-                inception = construct_hrs_model(dataset='IMAGENET', model_indicator=model_indicator, blocks_definition=blocks_definition)
+        if model_name == "inception_v3":
+            if self.hrs_defense:
+                blocks_definition = get_split("default", 'IMAGENET')
+                inception = construct_hrs_model(dataset='IMAGENET', model_indicator=model_indicator,
+                                                blocks_definition=blocks_definition)
 
             else:
                 inception = inception_v3.InceptionV3(weights='imagenet', input_tensor=Input(
                     shape=(self.image_size, self.image_size, 3)), layers=tf.keras.layers)
-            
+
             inception.trainable = False
         return inception
 
@@ -95,7 +96,6 @@ class AdvModel:
         # Adv Layer
         inputs = Input(shape=(self.center_size, self.center_size, self.channels))
         al = AdvLayer(image_size=self.image_size, center_size=self.center_size, channels=self.channels)(inputs)
-
 
         # Combine layers
         outputs = self.image_model(al)
@@ -119,7 +119,7 @@ class AdvModel:
 
         history = self.model.fit(x=x_train, y=y_train, validation_data=(x_valid, y_valid),
                                  epochs=self.epochs,
-                                 initial_epoch = self.previousEpoch,
+                                 initial_epoch=self.previousEpoch,
                                  batch_size=self.batch_size, callbacks=cbks, class_weight=weights, shuffle=True)
         return history
 
