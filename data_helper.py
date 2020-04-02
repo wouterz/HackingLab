@@ -92,7 +92,7 @@ def get_data(img_id: str, number_of_images: int, train=True, labels=None, expand
         labelNames = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z']
         images = dict()
         for label in labels:
-            files = glob.glob("images/captcha_lowercase_60/Letter_%s_*.png" % labelNames[label])
+            files = glob.glob("images/captcha_lowercase_60/lowercase_%s_*.png" % labelNames[label])
             images[label] = [np.array(image.load_img(f, target_size=(35, 35))) for f in
                              files[:number_of_images]]
 
@@ -101,19 +101,19 @@ def get_data(img_id: str, number_of_images: int, train=True, labels=None, expand
         if not labels:
             labels = [i for i in range(0,5)]
         images = dict()
-        lowercaseamfiles = glob.glob("images/captcha_lowercase_60/Letter_[a-m]_*.png")
+        lowercaseamfiles = glob.glob("images/captcha_lowercase_60/lowercase_[a-m]_*.png")
         images[0] = [np.array(image.load_img(f, target_size=(35, 35))) for f in
                              lowercaseamfiles]
-        lowercasenzfiles = glob.glob("images/captcha_lowercase_60/Letter_[n-z]_*.png")
+        lowercasenzfiles = glob.glob("images/captcha_lowercase_60/lowercase_[n-z]_*.png")
         images[1] = [np.array(image.load_img(f, target_size=(35, 35))) for f in
                              lowercasenzfiles]
-        uppercaseamfiles = glob.glob("images/captcha_uppercase_60/Letter_[A-M]_*.png")
+        uppercaseamfiles = glob.glob("images/captcha_uppercase_60/uppercase_[A-M]_*.png")
         images[2] = [np.array(image.load_img(f, target_size=(35, 35))) for f in
                              uppercaseamfiles]
-        uppercasenzfiles = glob.glob("images/captcha_uppercase_60/Letter_[N-Z]_*.png")
+        uppercasenzfiles = glob.glob("images/captcha_uppercase_60/uppercase_[N-Z]_*.png")
         images[3] = [np.array(image.load_img(f, target_size=(35, 35))) for f in
                              uppercasenzfiles]
-        digitfiles = glob.glob("images/captcha_digits_60/Digit_[0-9]_*.png")
+        digitfiles = glob.glob("images/captcha_digits_60/digits_[0-9]_*.png")
         images[4] = [np.array(image.load_img(f, target_size=(35, 35))) for f in
                              digitfiles]
 
