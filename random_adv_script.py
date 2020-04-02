@@ -4,11 +4,11 @@ import os
 
 import keras
 import tensorflow as tf
-from keras.layers import Input, Layer
-from keras_applications import inception_v3, inception_resnet_v2, resnet
-from keras.preprocessing import image
-from keras.models import Model
-from keras.optimizers import Adam
+from tensorflow.keras.layers import Input, Layer
+from tensorflow.keras_applications import inception_v3, inception_resnet_v2, resnet
+from tensorflow.keras.preprocessing import image
+from tensorflow.keras.models import Model
+from tensorflow.keras.optimizers import Adam
 
 import matplotlib.pyplot as plt
 import glob

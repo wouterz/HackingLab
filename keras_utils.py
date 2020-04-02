@@ -1,11 +1,9 @@
 import os
 import tensorflow as tf
 from tensorflow.keras.applications import inception_v3
-from tensorflow.keras.layers import Input, InputLayer
+from tensorflow.keras.layers import Input, InputLayer, Layer
 from tensorflow.keras.models import Model
 from collections.abc import Iterable
-from keras.engine.topology import Layer
-from project_utils import get_dimensions
 
 
 class RandomMask(Layer):
@@ -147,8 +145,9 @@ def construct_hrs_model(dataset, model_indicator, blocks_definition, load_weight
     assert os.path.exists(weights_dir), '%s does not exist' % weights_dir
 
     # input
-    img_rows, img_cols, img_channels = get_dimensions(dataset)
-    model_input = InputLayer(input_shape=(img_rows, img_cols, img_channels))
+    # img_rows, img_cols, img_channels = get_dimensions(dataset)
+    # TODO
+    model_input = InputLayer(input_shape=(35, 35, 3))
     save_dir = './Model/%s_models/' % dataset + model_indicator + '/'
 
     # loop over block

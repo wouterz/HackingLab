@@ -2,10 +2,14 @@ import os
 import tensorflow as tf
 import keras.backend as K
 import argparse
+
+from sklearn.model_selection import train_test_split
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import InputLayer
 from tensorflow.keras.optimizers import SGD
-from project_utils import get_data, get_dimensions
+from tensorflow_core.python.keras.utils.np_utils import to_categorical
+
+from data_helper import get_data
 from keras_utils import construct_switching_block
 from block_split_config import get_split
 
@@ -29,10 +33,16 @@ def train_hrs(model_indicator, training_epoch, split='default', dataset='IMAGENE
         os.makedirs('./Model/%s_models/' % dataset + model_indicator + '/')
     except: pass
 
-    # dataset and input dimensions
-    # TODO: get Imagenet Data
-    [X_train, X_test, Y_train, Y_test] = get_data(dataset=dataset, scale1=True, one_hot=True, percentage=1)
-    img_rows, img_cols, img_channels = get_dimensions(dataset)
+    IMAGES = 20
+    IMAGE_SIZE = 299
+    TEST_SIZE = 0.2
+    x, y, weights = get_data('imagenet', IMAGES, target_size=IMAGE_SIZE, labels=[2,3,4])
+    y = to_categorical(y, 1000, dtype='float32')
+    print(x.shape, y.shape)
+
+    print("Creating train and validation")
+    x_train, x_valid, y_train, y_valid = train_test_split(x, y, test_size=TEST_SIZE, shuffle=True)
+    print(x_train.shape, y_train.shape, x_valid.shape, y_valid.shape)
 
     # loss definition
     def fn(correct, predicted):
@@ -49,12 +59,12 @@ def train_hrs(model_indicator, training_epoch, split='default', dataset='IMAGENE
         # switching blocks up to the (block_idx - 1)'s block
         if block_idx == 0:
             print("BLOCK 0")
-            model_input = InputLayer(input_shape=(img_rows, img_cols, img_channels))
+            model_input = InputLayer(input_shape=(IMAGE_SIZE, IMAGE_SIZE, 3))
             # note: for InputLayer the input and output tensors are the same one.
             trained_blocks_output = model_input.output
         else:
             print("block > 0")
-            model_input = InputLayer(input_shape=(img_rows, img_cols, img_channels))
+            model_input = InputLayer(input_shape=(IMAGE_SIZE, IMAGE_SIZE, 3))
 
             # build switching blocks
             block_input = model_input.output
@@ -82,12 +92,12 @@ def train_hrs(model_indicator, training_epoch, split='default', dataset='IMAGENE
                 block_input = block_output
 
             # construct the model object
-            model = Model(input=model_input.input, output=block_output)
+            model = Model(inputs=model_input.input, outputs=block_output)
             # optimizer
             sgd = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
             # training
             model.compile(loss=fn, optimizer=sgd, metrics=['accuracy'])
-            model.fit(X_train, Y_train, batch_size=128, validation_data=(X_test, Y_test),
+            model.fit(x_train, y_train, batch_size=128, validation_data=(x_valid, y_valid),
                       nb_epoch=training_epoch[block_idx], shuffle=True)
 
             # save weights of this channel

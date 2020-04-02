@@ -10,6 +10,7 @@ import math
 import adv_model_script_tf as ams
 from keras.applications import inception_v3, inception_resnet_v2, resnet
 import tensorflow.keras as keras
+
 def testResults(inception, adv_layer, x, y):
     start = int(math.floor(IMAGE_SIZE - CENTER_SIZE) / 2)
     end = int(math.ceil(IMAGE_SIZE - CENTER_SIZE) / 2 + CENTER_SIZE)

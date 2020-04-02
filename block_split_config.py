@@ -69,11 +69,14 @@ def get_split(indicator, dataset):
             return generate_blocks
         elif dataset == 'IMAGENET':
             # block definitions
+
+            blocks = split_InceptionV3()
+
             def block_0():
-                return split_InceptionV3()[0]
+                return blocks[0]
 
             def block_1():
-                return split_InceptionV3()[1]
+                return blocks[1]
 
             generate_blocks = [block_0, block_1]
             return generate_blocks

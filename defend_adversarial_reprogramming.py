@@ -1,14 +1,6 @@
 import argparse
 import os
-import keras
-import tensorflow as tf
-import numpy as np
 
-from tensorflow.keras.models import Sequential, Model
-from tensorflow.keras.layers import ZeroPadding2D, LocallyConnected2D, Activation
-from tensorflow.keras.optimizers import SGD
-
-from project_utils import get_data
 from AdvModel import AdvModel
 
 
