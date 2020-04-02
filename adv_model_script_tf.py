@@ -12,7 +12,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('save_path', help='Path where to save files, END WITH /')
     parser.add_argument('images_per_class', type=int)
-    parser.add_argument('image_type', choices=['mnist', 'squares', 'captcha'], help='mnist or squares')
+    parser.add_argument('image_type', choices=['mnist', 'squares', 'squares_6_6', 'captcha', 'captcha_seperator'], help='mnist or squares')
     parser.add_argument('--continue_path')
     parser.add_argument('--continue_start_epoch', type=int)
     parser.add_argument('--batch_size', type=int, default=50)
@@ -20,7 +20,9 @@ if __name__ == "__main__":
 
     dim_map = {
         'captcha': (35, 3),
+        'captcha_seperator': (35, 3),
         'mnist': (28, 3),
+        'squares_6_6': (31, 3),
         'squares': (35, 3),
         'cifar10': (32, 3),
         'cifar100': (32, 3),
