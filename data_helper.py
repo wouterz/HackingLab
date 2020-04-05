@@ -128,7 +128,6 @@ def get_data(img_id: str, number_of_images: int, train=True, labels=None, expand
                                  files[:number_of_images]]
         #x,y = makeLists(images)
 
-
         x,y = makeLists(images)
     x = np.asarray(x)
     y = np.asarray(y)
