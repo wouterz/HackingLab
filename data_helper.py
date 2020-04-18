@@ -1,5 +1,6 @@
 import glob
 import math
+import re
 
 import numpy as np
 import tensorflow as tf
@@ -20,7 +21,24 @@ def preprocessImage(f):
     idx = f[:,:,:] > median
     f[idx]=255
     return f
-    
+
+def makeList(labelNames, digitDirectory="captcha_digits"):
+    print(labelNames)
+    uppercase = "".join(re.findall( r'[A-Z]', labelNames))
+    print(uppercase)
+    lowercase = "".join(re.findall(r'[a-z]', labelNames))
+    print(lowercase)
+    digits = "".join(re.findall(r'[0-9]', labelNames))
+    print(digits)
+    files = []
+    for letter in uppercase:
+        files.extend(glob.glob("images/captcha_uppercase_60/uppercase_[{}]_*.png".format(letter)))
+    for letter in lowercase:
+        files.extend(glob.glob("images/captcha_lowercase_60/lowercase_[{}]_*.png".format(letter)))
+    for letter in digits:
+        files.extend(glob.glob("images/{}_60/digits_[{}]_*.png".format(digitDirectory, letter)))
+    return files;
+
 def get_data(img_id: str, number_of_images: int, train=True, labels=None, expand=True):
     x = list()
     y = list()
@@ -97,22 +115,22 @@ def get_data(img_id: str, number_of_images: int, train=True, labels=None, expand
         images = dict()
         if img_id=='captcha_seperator':
             if not labels:
-                labels = [i for i in range(0,5)]
-            lowercaseamfiles = glob.glob("images/captcha_lowercase_60/lowercase_[a-m]_*.png")
+                labels = [i for i in range(0,4)]
+            lowercaseamfiles = makeList("0235789sozSOZgBD14Ja6e")
             images[0] = [np.array(image.load_img(f, target_size=(35, 35))) for f in
                                  lowercaseamfiles]
-            lowercasenzfiles = glob.glob("images/captcha_lowercase_60/lowercase_[n-z]_*.png")
+            lowercasenzfiles = makeList("EFKLkrCcmnItfAWwlNTU")
             images[1] = [np.array(image.load_img(f, target_size=(35, 35))) for f in
                                  lowercasenzfiles]
-            uppercaseamfiles = glob.glob("images/captcha_uppercase_60/uppercase_[A-M]_*.png")
+            uppercaseamfiles = makeList("udbihjGR")
             images[2] = [np.array(image.load_img(f, target_size=(35, 35))) for f in
                                  uppercaseamfiles]
-            uppercasenzfiles = glob.glob("images/captcha_uppercase_60/uppercase_[N-Z]_*.png")
+            uppercasenzfiles = makeList("QXPMxqpyVvYH")
             images[3] = [np.array(image.load_img(f, target_size=(35, 35))) for f in
                                  uppercasenzfiles]
-            digitfiles = glob.glob("images/captcha_digits_60/digits_[0-9]_*.png")
-            images[4] = [np.array(image.load_img(f, target_size=(35, 35))) for f in
-                                 digitfiles]
+       #     digitfiles = glob.glob("images/captcha_digits_60/digits_[0-9]_*.png")
+       #     images[4] = [np.array(image.load_img(f, target_size=(35, 35))) for f in
+       #                          digitfiles]
         else:
             if 'lowercase' in img_id:
                 labelNames = list("abcdefghijklmnopqrstuvwxyz")
@@ -120,10 +138,15 @@ def get_data(img_id: str, number_of_images: int, train=True, labels=None, expand
                 labelNames = list("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
             elif 'digits' in img_id:
                 labelNames = list("0123456789")
+            elif 'random' in img_id:
+                labelNames = list(img_id.split("_")[2])
             if not labels:
                 labels = [i for i in range(0, len(labelNames))]
             for label in labels:
-                files = glob.glob("images/{}_60/{}_{}_*.png".format(img_id,img_id.split("_")[1],labelNames[label]))
+                if 'digits' in img_id:
+                    files = makeList(labelNames[label], digitDirectory = img_id)
+                else:
+                    files = makeList(labelNames[label])
                 images[label] = [preprocessImage(f) for f in
                                  files[:number_of_images]]
         #x,y = makeLists(images)

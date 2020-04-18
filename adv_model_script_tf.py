@@ -12,25 +12,35 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('save_path', help='Path where to save files, END WITH /')
     parser.add_argument('images_per_class', type=int)
-    parser.add_argument('image_type', choices=['mnist', 'squares', 'squares_6_6', 'captcha_lowercase', 'captcha_uppercase', 'captcha_digits', 'captcha_seperator'], help='mnist or squares')
+    parser.add_argument('image_type', choices=['mnist', 'squares', 'squares_6_6', 'captcha_lowercase', 'captcha_uppercase', 'captcha_digits', 'BRADHITC_captcha_digits', 'CURLZ____captcha_digits', 'GILSANUB_captcha_digits', 'comic_captcha_digits'
+                                               ,'captcha_seperator', 'captcha_random'], help='mnist or squares')
+    parser.add_argument('--random', default="")
     parser.add_argument('--continue_path')
     parser.add_argument('--continue_start_epoch', type=int)
     parser.add_argument('--batch_size', type=int, default=50)
     args = parser.parse_args()
-
+    
     dim_map = {
         'captcha_lowercase': (35, 3),
         'captcha_seperator': (35, 3),
         'captcha_uppercase': (35, 3),
         'captcha_digits': (35, 3),
+        'BRADHITC_captcha_digits': (35, 3),
+        'comic_captcha_digits': (35, 3),
+        'CURLZ____captcha_digits': (35, 3),
+        'GILSANUB_captcha_digits': (35, 3),
+        'captcha_random': (35, 3),
         'mnist': (28, 3),
         'squares_6_6': (31, 3),
         'squares': (35, 3),
         'cifar10': (32, 3),
         'cifar100': (32, 3),
     }
+    
     IMAGES = args.image_type
     CENTER_SIZE, CHANNELS = dim_map[IMAGES]
+    if(len(args.random)>0):
+        IMAGES = ("_").join([args.image_type, args.random])
     MAX_IMAGES_PER_CLASS = args.images_per_class
 
     BATCH_SIZE = args.batch_size
