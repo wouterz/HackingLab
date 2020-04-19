@@ -18,6 +18,8 @@ if __name__ == "__main__":
     parser.add_argument('--continue_path')
     parser.add_argument('--continue_start_epoch', type=int)
     parser.add_argument('--batch_size', type=int, default=50)
+    parser.add_argument('--retrain_inception', type=bool, default=False)
+
     args = parser.parse_args()
     
     dim_map = {
@@ -88,4 +90,4 @@ if __name__ == "__main__":
         a_model.fit_model(x_train, y_train, x_valid, y_valid, weights, SAVE_PATH)
     else:
         print("Continue model %s, from epoch %d" % (CONTINUE_MODEL, CONTINUE_MODEL_EPOCHS))
-        a_model.continue_model(CONTINUE_MODEL_EPOCHS, CONTINUE_MODEL, x_train, y_train, x_valid, y_valid, weights, SAVE_PATH)
+        a_model.continue_model(CONTINUE_MODEL_EPOCHS, CONTINUE_MODEL, x_train, y_train, x_valid, y_valid, weights, SAVE_PATH, args.retrain_inception)

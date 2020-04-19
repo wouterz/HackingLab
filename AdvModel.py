@@ -115,10 +115,19 @@ class AdvModel:
                                  batch_size=self.batch_size, callbacks=cbks, class_weight=weights, shuffle=True)
         return history
 
-    def continue_model(self, current_epoch, weights, x_train, y_train, x_valid, y_valid, weigths, save_path=""):
-        self.model.load_weights(weights)
+    def continue_model(self, current_epoch, model_weights, x_train, y_train, x_valid, y_valid, class_weights, save_path="", retrain_inception=False):
+        self.model.load_weights(model_weights)
+
+        if retrain_inception:
+            self.model.get_layer('input_2').trainable = False
+            self.model.get_layer('adv_layer').trainable = False
+            self.model.get_layer('inception_v3').trainable = True
+            for l in self.model.layers:
+                print(l.name, l.trainable)
+            print(self.model.summary())
+
         self.previousEpoch = current_epoch
-        self.fit_model(x_train, y_train, x_valid, y_valid, weights, save_path)
+        self.fit_model(x_train, y_train, x_valid, y_valid, class_weights, save_path)
 
     def step_decay(self, epoch):
         lr = self.adam_learn_rate
