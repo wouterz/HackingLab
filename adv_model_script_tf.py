@@ -59,7 +59,7 @@ if __name__ == "__main__":
     ADAM_DECAY = 0.96
     DECAY_STEP = 2
     TEST_SIZE = 0.10
-    EPOCHS = 10000
+    EPOCHS = 100
 
     print("PARAMETERS: imageType {}, imagesPerClass {} SavePath {}".format(IMAGES, MAX_IMAGES_PER_CLASS, SAVE_PATH))
 
