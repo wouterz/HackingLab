@@ -119,12 +119,17 @@ class AdvModel:
         self.model.load_weights(model_weights)
 
         if retrain_inception:
+            print("set inception retrainable")
             self.model.get_layer('input_2').trainable = False
             self.model.get_layer('adv_layer').trainable = False
             self.model.get_layer('inception_v3').trainable = True
             for l in self.model.layers:
                 print(l.name, l.trainable)
+            self.model.compile(optimizer=self.optimizer,
+                          loss=['categorical_crossentropy'],
+                          metrics=['accuracy', self.get_lr_metric(self.optimizer)])
             print(self.model.summary())
+
 
         self.previousEpoch = current_epoch
         self.fit_model(x_train, y_train, x_valid, y_valid, class_weights, save_path)

@@ -13,15 +13,16 @@ if __name__ == "__main__":
     parser.add_argument('save_path', help='Path where to save files, END WITH /')
     parser.add_argument('images_per_class', type=int)
     parser.add_argument('image_type', choices=['mnist', 'squares', 'squares_6_6', 'captcha_lowercase', 'captcha_uppercase', 'captcha_digits', 'BRADHITC_captcha_digits', 'CURLZ____captcha_digits', 'GILSANUB_captcha_digits', 'comic_captcha_digits'
-                                               ,'captcha_seperator', 'captcha_random'], help='mnist or squares')
+                                               ,'captcha_seperator', 'captcha_random', 'imagenet'], help='mnist or squares')
     parser.add_argument('--random', default="")
     parser.add_argument('--continue_path')
     parser.add_argument('--continue_start_epoch', type=int)
     parser.add_argument('--batch_size', type=int, default=50)
-    parser.add_argument('--retrain_inception', type=bool, default=False)
+    parser.add_argument('--retrain_inception', const=True,  nargs='?', type=bool, default=False)
 
     args = parser.parse_args()
-    
+
+    print('retrain_inception', args.retrain_inception)
     dim_map = {
         'captcha_lowercase': (35, 3),
         'captcha_seperator': (35, 3),
@@ -37,6 +38,7 @@ if __name__ == "__main__":
         'squares': (35, 3),
         'cifar10': (32, 3),
         'cifar100': (32, 3),
+        'imagenet': (35, 3),
     }
     
     IMAGES = args.image_type
@@ -68,6 +70,7 @@ if __name__ == "__main__":
     # Load / prepare data
     x_train, y_train, weights = get_data(IMAGES, MAX_IMAGES_PER_CLASS, train=True, expand=False)
     y_train = to_categorical(y_train, 1000,  dtype='float32')
+
     print(x_train.shape, y_train.shape)
 
     print("Creating train and validation")

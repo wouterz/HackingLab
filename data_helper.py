@@ -1,11 +1,13 @@
 import glob
 import math
+import os
 import re
 
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.preprocessing import image
 from scipy import ndimage
+
 
 def makeLists(images):
     x = list()
@@ -39,9 +41,11 @@ def makeList(labelNames, digitDirectory="captcha_digits"):
         files.extend(glob.glob("images/{}_60/digits_[{}]_*.png".format(digitDirectory, letter)))
     return files;
 
-def get_data(img_id: str, number_of_images: int, train=True, labels=None, expand=True):
+def get_data(img_id: str, number_of_images: int, train=True, labels=None, expand=True, **kwargs):
     x = list()
     y = list()
+
+    print(img_id)
 
     if img_id in ['mnist', 'cifar10', 'cifar100']:
         mapper = {
@@ -110,8 +114,30 @@ def get_data(img_id: str, number_of_images: int, train=True, labels=None, expand
                     images[key] = ls * math.ceil(number_of_images / len(ls))
 
         x,y = makeLists(images)
+    elif img_id == 'imagenet':
+        if not labels:
+            labels = [2, 3, 4, 5, 48, 235, 256, 716]
 
-    elif 'captcha' in img_id :
+        images = dict()
+        for label in labels:
+            files = glob.glob("images/imagenet/%s/*.jpg" % label)
+            # files = glob.glob("images/captcha_60/Letter_%s_*.png" % labelNames[label])
+            images[label] = list()
+            target_size = kwargs.get('target_size', 35)
+            for f in files[:number_of_images]:
+                try:
+                    images[label].append(np.array(image.load_img(f, target_size=(target_size, target_size))))
+                except Exception as e:
+                    print("imagenet load images", e)
+
+            # images[label] = [np.array(image.load_img(f, target_size=(target_size, target_size))) for f in
+            #                  files[:number_of_images]]
+
+        for k, v in images.items():
+            x.extend(v)
+            y.extend([k] * len(v))
+
+    elif 'captcha' in img_id:
         images = dict()
         if img_id=='captcha_seperator':
             if not labels:
@@ -169,3 +195,39 @@ def get_data(img_id: str, number_of_images: int, train=True, labels=None, expand
     # x -= 0.5
     # x *= 2
     return x, y, weightTensor
+
+
+def load_imagenet_data(amount, target_size, labels=[2, 3, 4, 5, 48, 235, 256, 716, 730, 742]):
+    x = list()
+    y = list()
+
+    for label in labels:
+
+        urls_file = './images/imagenet/urls/label_{}_imagenet.synset.txt'.format(label)
+        save_path = 'C:/Users/woute/Documents/Git/HackingLab/images/imagenet/{}'
+        with open(urls_file, 'r') as f:
+            failed = 0
+            for i, url in enumerate(f):
+                print(i, len(x))
+                url = url.rstrip("\n")
+                if i >= amount + failed:
+                    break
+
+                try:
+                    if not os.path.exists(save_path.format(label)):
+                        os.makedirs(save_path.format(label))
+
+                    name = '{}/{}'.format(save_path.format(label), url.split("/")[-1])
+                    img_path = tf.keras.utils.get_file(name, origin=url)
+                    img = image.load_img(img_path, target_size=(target_size, target_size))
+                    x.append(np.asarray(img))
+                    y.append(label)
+                except Exception as e:
+                    print("exception", e)
+                    failed = failed + 1
+
+    return x, y
+
+
+if __name__ == '__main__':
+    x, y = load_imagenet_data(200, target_size=35)
