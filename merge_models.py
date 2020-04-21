@@ -1,7 +1,8 @@
 import argparse
-
-from tensorflow_core.python.keras import Input
+import tensorflow as tf
+from tensorflow_core.python.keras import Sequential, Input
 from tensorflow_core.python.keras.models import Model
+from tensorflow_core.python.keras.optimizers import Adam
 
 from AdvModel import AdvModel
 
@@ -9,6 +10,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('save_path_model1', help='Path to model1')
     parser.add_argument('save_path_model2', help='Path to model2')
+    parser.add_argument('save_path_out', help='Path to combined model')
 
     args = parser.parse_args()
 
@@ -36,10 +38,7 @@ if __name__ == '__main__':
     model = Model(inputs=[inputs],
                   outputs=[outputs])
 
+    print("New combined model")
     print(model.summary())
 
-
-
-
-
-
+    model.save(filepath=args.save_path_out)
