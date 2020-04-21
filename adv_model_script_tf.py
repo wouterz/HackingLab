@@ -2,7 +2,7 @@ import argparse
 import os
 
 from sklearn.model_selection import train_test_split
-import numpy as np
+
 from AdvModel import AdvModel
 from data_helper import get_data
 from tensorflow.keras.utils import to_categorical
@@ -38,7 +38,7 @@ if __name__ == "__main__":
         'squares': (35, 3),
         'cifar10': (32, 3),
         'cifar100': (32, 3),
-        'imagenet': (35, 3),
+        'imagenet': (299, 3),
     }
     
     IMAGES = args.image_type

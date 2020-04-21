@@ -123,7 +123,7 @@ def get_data(img_id: str, number_of_images: int, train=True, labels=None, expand
             files = glob.glob("images/imagenet/%s/*.jpg" % label)
             # files = glob.glob("images/captcha_60/Letter_%s_*.png" % labelNames[label])
             images[label] = list()
-            target_size = kwargs.get('target_size', 35)
+            target_size = kwargs.get('target_size', 299)
             for f in files[:number_of_images]:
                 try:
                     images[label].append(np.array(image.load_img(f, target_size=(target_size, target_size))))
